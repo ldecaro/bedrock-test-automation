@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Calculator</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #F3F3F3;
+      font-family: Arial, sans-serif;
+    }
+
+    #calculator,
+    #coverage {
+      border: 1px solid #BDBDBD;
+      border-radius: 5px;
+      padding: 20px;
+      background-color: #FFF;
+      box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+      width: 250px;
+      margin: 40px;
+    }
+
+    #display {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+    }
+
+    button {
+      width: 40px;
+      height: 40px;
+      margin: 2px;
+      border: none;
+      color: #FFF;
+      border-radius: 5px;
+    }
+
+    .number-btn {
+      background-color: #4CAF50;
+    }
+
+    .operator-btn {
+      background-color: #FF5722;
+    }
+
+    .clear-btn {
+      background-color: #F44336;
+    }
+
+    .equals-btn {
+      background-color: #3F51B5;
+    }
+
+    #percentage {
+      font-size: 16px;
+      color: #333;
+      margin-top: 10px;
+    }
+
+    #coverage h2,
+    #coverage h3 {
+      margin: 0;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #BDBDBD;
+    }
+  </style>
+  <script>
+    var operator = null;
+    var operand1 = null;
+    var operand2 = null;
+    var coverage = {
+      pressButton: {
+        enter: 0,
+        isNaN: 0,
+        elseBlock: 0,
+        exit: 0
+      },
+      calculate: {
+        enter: 0,
+        caseAdd: 0,
+        caseSubtract: 0,
+        caseMultiply: 0,
+        caseDivide: 0,
+        caseDivideByZero: 0,
+        casePower: 0,
+        caseSqrt: 0,
+        caseSqrtNegative: 0,
+        caseDefault: 0,
+        exit: 0
+      },
+      clearDisplay: {
+        enter: 0,
+        exit: 0
+      }
+    };
+
+    function pressButton(value) {
+      coverage.pressButton.enter++;
+      let display = document.getElementById("display");
+      if (isNaN(value)) {
+        coverage.pressButton.isNaN++;
+        operator = value;
+        operand1 = parseFloat(display.value);
+        display.value = "";
+      } else {
+        coverage.pressButton.elseBlock++;
+        display.value += value;
+      }
+      coverage.pressButton.exit++;
+      displayCoverage();
+    }
+
+    function calculate() {
+      coverage.calculate.enter++;
+      operand2 = parseFloat(document.getElementById("display").value);
+      let result = null;
+      switch (operator) {
+        case '+':
+          coverage.calculate.caseAdd++;
+          result = operand1 + operand2;
+          break;
+        case '-':
+          coverage.calculate.caseSubtract++;
+          result = operand1 - operand2;
+          break;
+        case '*':
+          coverage.calculate.caseMultiply++;
+          result = operand1 * operand2;
+          break;
+        case '/':
+          coverage.calculate.caseDivide++;
+          if (operand2 !== 0) {
+            result = operand1 / operand2;
+          } else {
+            coverage.calculate.caseDivideByZero++;
+            alert("Cannot divide by zero!");
+          }
+          break;
+        case '^':
+          coverage.calculate.casePower++;
+          result = Math.pow(operand1, operand2);
+          break;
+        case 'sqrt':
+          coverage.calculate.caseSqrt++;
+          if (operand1 >= 0) {
+            result = Math.sqrt(operand1);
+          } else {
+            coverage.calculate.caseSqrtNegative++;
+            alert("Cannot take square root of a negative number!");
+          }
+          break;
+        default:
+          coverage.calculate.caseDefault++;
+          alert("Invalid operator!");
+          return;
+      }
+      document.getElementById("display").value = result;
+      operand1 = result;
+      operand2 = null;
+      operator = null;
+      coverage.calculate.exit++;
+      displayCoverage();
+    }
+
+    function clearDisplay() {
+      coverage.clearDisplay.enter++;
+      document.getElementById("display").value = "";
+      operator = null;
+      operand1 = null;
+      operand2 = null;
+      coverage.clearDisplay.exit++;
+      displayCoverage();
+    }
+
+    function displayCoverage() {
+      let coverageDiv = document.getElementById("coverage");
+      let total = 0;
+      let covered = 0;
+      for (const functionName in coverage) {
+        for (const blockName in coverage[functionName]) {
+          total++;
+          if (coverage[functionName][blockName] > 0) {
+            covered++;
+          }
+        }
+      }
+      const percentage = ((covered / total) * 100).toFixed(2);
+
+      coverageDiv.innerHTML = `<h2>Code coverage:</h2>${Object.keys(coverage).map(functionName => `<h3>${functionName}:</h3>${Object.keys(coverage[functionName]).map(blockName => `<p>${blockName}: ${coverage[functionName][blockName]} times</p>`).join('')}`).join('')}`;
+      coverageDiv.innerHTML += `<p id="percentage">Coverage Percentage: ${percentage}%</p>`;
+    }
+
+    window.onload = displayCoverage;
+  </script>
+</head>
+
+<body>
+  <div id="calculator">
+    <h1>Calculator</h1>
+    <input type="text" id="display" readonly><br>
+    <button id="button-number-1" class="number-btn" onclick="pressButton('1')">1</button>
+    <button id="button-number-2" class="number-btn" onclick="pressButton('2')">2</button>
+    <button id="button-number-3" class="number-btn" onclick="pressButton('3')">3</button>
+    <button id="button-addition" class="operator-btn" onclick="pressButton('+')">+</button><br>
+    <button id="button-number-4" class="number-btn" onclick="pressButton('4')">4</button>
+    <button id="button-number-5" class="number-btn" onclick="pressButton('5')">5</button>
+    <button id="button-number-6" class="number-btn" onclick="pressButton('6')">6</button>
+    <button id="button-subtraction" class="operator-btn" onclick="pressButton('-')">-</button><br>
+    <button id="button-number-7" class="number-btn" onclick="pressButton('7')">7</button>
+    <button id="button-number-8" class="number-btn" onclick="pressButton('8')">8</button>
+    <button id="button-number-9" class="number-btn" onclick="pressButton('9')">9</button>
+    <button id="button-multiplication" class="operator-btn" onclick="pressButton('*')">*</button><br>
+    <button id="button-number-0" class="number-btn" onclick="pressButton('0')">0</button>
+    <button id="button-division" class="operator-btn" onclick="pressButton('/')">/</button>
+    <button id="button-power" class="operator-btn" onclick="pressButton('^')">^</button>
+    <button id="button-square-root" class="operator-btn" onclick="pressButton('sqrt')">sqrt</button><br>
+    <button id="button-equal" class="equals-btn" onclick="calculate()">=</button>
+    <button id="button-clear-display" class="clear-btn" onclick="clearDisplay()">C</button>
+    <p><em>Note: This is a basic web calculator and only supports unary and binary operations (up to two numbers and one
+        operation at a time).</em></p>
+  </div>
+
+  <div id="coverage"></div>
+</body>
+
+</html>
