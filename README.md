@@ -1,6 +1,6 @@
 # Bedrock Test Automation using Selenium
 
-This project implements an automated web UI testing framework using Selenium to remotely control a browser and simulate user interactions on a site to thoroughly test it for bugs or issues. A LLM (Claude3 Sonnet) is used to implement the navigation and test the web application. LLM is aware of HTML source code, actionable elements, his past actions and remaining interactions available. A sample app is available as part of this project.
+This project implements an automated web UI testing framework using Selenium to remotely control a browser and simulate user interactions on a site to thoroughly test it for bugs or issues. A LLM (Claude3 Sonnet) is used to implement the navigation and test the web application. LLM is aware of HTML source code, actionable elements, his past actions and remaining interactions available.
 
 ## What it does
 The framework is used to automatically test a website by simulating different user flows through the site, clicking buttons, entering data and more to try to cover all possible paths and find any bugs or issues. It reads test data from JSON files to drive the automation and records each action taken to allow replaying or analyzing the full sequence of interactions.
@@ -22,21 +22,22 @@ In summary, this project is implementing an automated web UI testing framework u
 ## Requirements
 To run this project, the following are needed:
 
-Java 17 or higher
-Maven
-Selenium Java bindings
-ChromeDriver (or other browser driver depending on browser used for testing)
-An AWS account with access to Amazon Bedrock and Claude3 Sonnet.
+- [Java 17](https://docs.aws.amazon.com/corretto/latest/corretto-17-ug/downloads-list.html) or higher
+- [Apache Maven](https://maven.apache.org/download.cgi)
+- [ChromeDriver](https://googlechromelabs.github.io/chrome-for-testing/) (or other browser driver depending on browser used for testing)
+- An [AWS account](https://aws.amazon.com) with access to Amazon Bedrock and Claude3 Sonnet.
+- Python 3 in case you decide to create a http server to run the sample application
 
 ## Running the tests
 
-- Using python3 create a simple HTTP server to run the sample application.
-```
-python3 -m http.server 9876
-```
 - Clone the project repository
 - Run `mvn package` to build the application
 - Authenticate your CLI to your AWS environment
+- Using python3 create a simple HTTP server to run the sample application.
+```
+cd test-sites
+python3 -m http.server 9876
+```
 - Run 
 ```
 java -jar target/genai-selenium-1.0-SNAPSHOT.jar <url> <delay> <interactions> <loadWaitTime> <testType> <outputDir>
