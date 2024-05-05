@@ -64,6 +64,7 @@ public class BedrockClient implements BedrockService {
         var payload = new JSONObject()
                 .put("anthropic_version", "bedrock-2023-05-31")
                 .put("max_tokens", config.getMaxTokens())
+                .put("temperature", 0.2)
                 .append("messages", new JSONObject()
                         .put("role", "user")
                         .append("content", new JSONObject()

@@ -39,8 +39,6 @@ import com.google.gson.JsonObject;
 public class TestCalculator implements Command {
 
     private static final Logger logger = LogManager.getLogger(App.class);
-    private static final String CHROME_DRIVER = "C:\\Users\\luizd\\git\\genai-selenium\\drivers\\123\\chromedriver-win64\\chromedriver.exe";
-
     
     @Override
     public void execute(CommandParams params) throws Exception {
@@ -53,8 +51,6 @@ public class TestCalculator implements Command {
         String outputDir = params.getOutputDir();
         List<ActionRecord> pastActions = params.getPastActions();
 
-
-        System.out.println("Test Calculator");
         URI uri = new URI(url);
         if( "file".equals(uri.toURL().getProtocol()) ){
             url = Paths.get(url).toAbsolutePath().toUri().toString();
@@ -66,7 +62,6 @@ public class TestCalculator implements Command {
         Gson gson = new Gson();
 
         // Open the web browser and navigate to the app's URL
-        System.setProperty("webdriver.chrome.driver", TestCalculator.CHROME_DRIVER);
         ChromeOptions options = new ChromeOptions();
         options.setHeadless(Boolean.TRUE);
         options.addArguments("--remote-allow-origins=*");        
@@ -113,8 +108,8 @@ public class TestCalculator implements Command {
                         1- A filtered HTML source for the web application is sent with these instructions inside <code></code> tags
                         2- A list of interactable elements is sent inside <interact></interact> tags
                         3- A list of past actions that you have done for this test is sent inside <actions></actions> tags. The first element is the first action of the test and last element is the previous action
-                        4- Please output the id of the element to chick on next and provide a brief explanation or reasoning for your choice
-                        5- The goal is to test as many different features as possible to find potential bugs and make sure to include edge cases. . Also make sure to try to get to a 100%% coverage with the total interactions you have available. Your total interactions available is informed inside <available-interactions></available-interactions> tags
+                        4- Please output the id of the element to click on next and provide a brief explanation or reasoning for your choice
+                        5- The goal is to test as many different features as possible to find potential bugs and make sure to include edge cases. Also make sure to try to get to a 100%% coverage with the total interactions you have available. Your total interactions available is informed inside <available-interactions></available-interactions> tags
                         6- Your responnse should be sent as a JSON object that follows the format:{\"id\": \"<element-id>\", \"explanation\": \"<explanation>\"}. Your reply is ONLY the JSON object, DO NOT use no markdown using ``` or ```json
                         
                         <code>%s</code>
@@ -125,7 +120,7 @@ public class TestCalculator implements Command {
                         Assistant:
                     """, filteredHtml, clickableElementsData, formatPastActions(pastActions), interactions-i);
                 
-                // logger.info(prompt);
+                logger.info(prompt);
 
                 String response = service.invoke(prompt);
                 

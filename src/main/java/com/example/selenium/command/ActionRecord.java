@@ -14,6 +14,13 @@ public class ActionRecord {
         this.coveragePercentage = coveragePercentage;
     }
 
+    public ActionRecord(int step, String action, String explanation){
+        this.step = step;
+        this.action = action;
+        this.observation = "";
+        this.coveragePercentage = "";
+    }
+
     public int getStep() {
         return step;
     }
@@ -28,5 +35,9 @@ public class ActionRecord {
 
     public String getCoveragePercentage() {
         return coveragePercentage;
+    }
+
+    public String toString(){
+        return String.format("Step: %s,Action: <script>%s</script>, Explanation: %s", step, action, observation);
     }
 }
