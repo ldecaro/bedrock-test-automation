@@ -85,7 +85,7 @@ public class Navigate implements Command {
             //logger.info("Source:\n "+html);
 
             String testCase = """
-                You are testing the authentication mechanism of this web application. Your login is bexiga@gmail.com and your password is 2024welcome1.
+                You are testing the authentication mechanism of this web application. Your login is bexiga@gmail.com and your password is 2024welcome1. The test case finsishes successfully once you are able to input authetication details and presented with a page containing issues for the bazinga blitz. Show me how many issues are there
                     """;
 
                     // My recommendation is to execute the test case in 4 steps: click on sign in button, input e-mail, input password and authenticate.
@@ -119,23 +119,28 @@ public class Navigate implements Command {
 
             String prompt = String.format(
                 """
-                    Human: You are a professional tester testing web applications looking for edge cases that will make the test fail. You provide an output to the next step you need to complete the text case. You can provide values to several inputs at once but click in one element only. Provide the information to the next step according to the following instructions:
+                    Human: You are a professional tester testing web applications looking for edge cases that will make the test fail. You provide an output to the next step you need to complete the text case. You can provide values to several inputs at once but one click action only. Your actions must use actionable elements from the input. Provide the information to the next step according to the following instructions:
 
-                    1- One input is the HTML source code of the web page. You will find it inside <code></code> tags
+                    1- One input is the HTML source code of the web page. You will find it inside <code></code> tags.
                     2- Another input is the description of the test case you are executing. You will find it inside <testcase></testcase> tags
                     3- Another input is the list of past actions that you have done so far. The first element is the first action of the test and last element is the previous action. You will find it inside <action></action> tags
             	    4- Another input is the number of available interactions. You will find it inside <available-interactions></available-interactions> tags.
                     5- Another input is the list of elements available for you to interact with. They are of type input or clickable. You will find it inside <interact></interact> tags
-                    6- Provide your answer as a JSON Object containing only the next step. The object should contain a key "explanation" and a key "actions". Key "actions" is an array of JSON objects with keys "action", "id" and "value". Only use elements with ids sent in the input inside <interact></interact> tags. Sometimes you need to click an element to visualize the input form. These are the examples:
+                    6- Your answer must always be JSON Object containing only the next step. The object should contain a key "explanation" and a key "actions". Key "actions" is an array of JSON objects with keys "action", "id" and "value". Sometimes you need to click an element to visualize the input form. These are the examples:
                     <examples>
                     {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"button1","value":"Submit"}, {"action":"input","id":"name-field","value":"John Doe"}, {"action":"input","id":"dropdown-menu","value":"Option 2"}, {"action":"input","id":"email-field","value":"johndoe@example.com"} ]}
                     {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"link-1","value":"Learn More"}]}
                     {"explanation":"Click on the button to submit the form","actions": [{"action":"input","id":"name-field","value":"John Doe"}, {"action":"input","id":"dropdown-menu","value":"Option 2"}, {"action":"input","id":"email-field","value":"johndoe@example.com"}, {"action":"click","id":"link-sign-in","value":"SignIn"} ]}
                     </examples>
-                    7- When test finishes please inform if the test completed successfully or not and why
+                    7- When test case is completed your answer must be a JSON object with two keys, status and explanation. Here are a few examples:
+                    <examples>
+                    {"status":"success","explanation":"<EXPLANATION>"}
+                    {"status":"failure","explanation":"<EXPLANATION>"}
+                    </examples>
+                    8- For test to finish successfully, your explanation must contain evidence within the source HTML code that conditions to finish the test were met. Do not finish test successfully becore finding evidence within the HTML code.
 
                     <code>%s</code>
-                    <testcase>%s</testcase>
+                    <testcase>%s. Your answer is in JSON format. You execute at least 10 steps before failing. Your actions use elements from the input</testcase>
                     <actions>%s</actions>
                     <available-interactions>%s</available-interactions>
                     <interact>%s</interact>
@@ -150,7 +155,7 @@ public class Navigate implements Command {
             String response = service.invoke(prompt);
 
             //logger.info("**************************");
-            //logger.info(response);
+            logger.info(response);
             //logger.info("**************************");
 
             // Parse the response to get the selected element ID and explanation
@@ -170,6 +175,10 @@ public class Navigate implements Command {
 
             text = new JSONObject( rawResponse.substring(rawResponse.indexOf("{"), rawResponse.lastIndexOf("}")+1));
 
+            if(text.has("status")){
+                logger.info(String.format("Test finished. Status: %s. Explanationn: %s", text.getString("status"), text.getString("explanation")));
+                break;
+            }
 /*             Pattern jsonPattern = Pattern.compile("(\\{.*?\\})");
             Matcher matcher = jsonPattern.matcher(rawResponse);
 
@@ -204,8 +213,6 @@ public class Navigate implements Command {
                     if(element.isPresent()){
                         ((JavascriptExecutor)browser).executeScript("arguments[0].focus();", element.get().getElement());
                         element.get().getElement().sendKeys(Keys.chord(Keys.CONTROL, "a"), action.getString("value"));
-                        // element.get().getElement().clear();
-                        // element.get().getElement().sendKeys(action.getString("value"));
                         logger.info("Inputted value "+action.getString("value")+" on "+element.get().getId());                        
                     }
                 }else if( "click".equals(action.getString("action")) ){
@@ -221,32 +228,13 @@ public class Navigate implements Command {
                 logger.info("No click action found");
                 pastActions.add(text.toString());
                 elements.clear();
+                new Actions(browser).sendKeys(Keys.TAB, Keys.ENTER).perform();
                 continue;
             }
 
             logger.info("Clicking on "+click.getId());
             new Actions(browser).moveToElement(click.getElement()).click().perform();
             
-            // click.getElement().click();
-            
-
-
-            //let's get the value of the explanation inside the response object. It's inside the <explanation></explanation> tags
-            // String explanation = response.substring(response.indexOf("<explanation>")+13, response.indexOf("<\\/explanation>"));
-            // logger.info("Step #"+step+". Explanation: "+explanation);
-
-            //let's get the value of the javascript inside the response object. It's inside the <script></script> tags
-            // String javascript = response.substring(response.indexOf("<script>")+8, response.indexOf("<\\/script>"));
-
-            // Cast the WebDriver instance to a JavascriptExecutor
-            // JavascriptExecutor js = (JavascriptExecutor) browser;
-
-            // Execute JavaScript code to interact with the page
-            // js.executeScript(javascript);
-
-            //record action
-            // pastActions.add(new ActionRecord(step, javascript, explanation));
-            //add text information to past actions as a JSON string
             pastActions.add(text.toString());
             elements.clear();
         }
