@@ -12,6 +12,7 @@ public class CommandParams {
     private String testType = "bedrock";
     private String outputDir = "C:\\Users\\luizd\\git\\genai-selenium\\target\\output";
     private List<ActionRecord> pastActions = new ArrayList<>();
+    private String testCase = "";
 
     private CommandParams() {
     }
@@ -37,6 +38,9 @@ public class CommandParams {
     }
     public List<ActionRecord> getPastActions() {
         return pastActions;
+    }
+    public String getTestCase() {
+        return testCase;
     }
     public static Builder builder() {
         return new Builder();
@@ -78,6 +82,10 @@ public class CommandParams {
 
         public Builder pastActions(List<ActionRecord> pastActions) {
             params.pastActions = pastActions;
+            return this;
+        }
+        public Builder testCase(String testCase) {
+            params.testCase = testCase;
             return this;
         }
 

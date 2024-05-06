@@ -274,4 +274,17 @@ public class TestCalculator implements Command {
         }
         return sb.toString();
     }     
+
+    public static CommandParams getAuthCommandParams(){
+        
+        return CommandParams.builder()
+            .url("http://localhost:9876/")
+            .delay(1000)
+            .interactions(100)
+            .loadWaitTime(2000)
+            .testType("bedrock")
+            .outputDir("C:\\Users\\luizd\\git\\bedrock-test-automation\\target\\output")
+            .pastActions(new ArrayList<ActionRecord>())
+        .build();
+    }
 }

@@ -1,15 +1,11 @@
 package com.example.selenium;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.example.selenium.command.ActionRecord;
 import com.example.selenium.command.Command;
-import com.example.selenium.command.CommandParams;
 import com.example.selenium.command.Navigate;
 
 
@@ -21,35 +17,10 @@ public class App {
 
     private static final Logger logger = LogManager.getLogger(App.class);
 
-    public static boolean isBinaryAvailable(String binaryName) {
-        try {
-            // Try to execute the command to find the binary
-            Process process = Runtime.getRuntime().exec("which " + binaryName);
-            //print the output of the command
-            logger.info( new String(process.getInputStream().readAllBytes()));
-            int exitCode = process.waitFor();
-
-            // If the exit code is 0, the binary was found
-            return exitCode == 0;
-        } catch (IOException | InterruptedException e) {
-            // If any exception occurs, assume the binary is not available
-            return false;
-        }
-    }
-
-    public static boolean isWindows() {
-        String osName = System.getProperty("os.name");
-        return osName.startsWith("Windows");
-    }
-
     public static void main( String[] args ){
 
         System.out.println("Usage: java App <url> <delay> <interactions> <load_wait_time> <test_type> <output_dir>");
         logger.info("Starting tests...");
-        // if (args.length < 6) {
-        //     System.out.println("Usage: java App <url> <delay> <interactions> <load_wait_time> <test_type> <output_dir>");
-        //     return;
-        // }
 
         String chromeDriver = null;
         if( isWindows() ){
@@ -58,21 +29,7 @@ public class App {
             chromeDriver = "chromedriver";
         }
 
-        if( ! isBinaryAvailable(chromeDriver) ){
-
-            logger.info("Chrome driver is not available in the system PATH. Will check if we have a system property set with the correct location (webdriver.chrome.driver)");
-            if( System.getProperty("webdriver.chrome.driver") == null ){
-
-                logger.info("Chrome driver is not set as a system property (webdriver.chrome.driver). Setting a default location for it... ");
-                System.setProperty("webdriver.chrome.driver", "C:\\Users\\luizd\\git\\bedrock-test-automation\\drivers\\123\\chromedriver-win64\\chromedriver.exe");
-                logger.info("Set system property webdriver.chrome.driver with a default location of your chrome driver. Current set location is:  "+System.getProperty("webdriver.chrome.driver"));
-            }else{
-
-                logger.info("Chrome driver is available a system property (webdriver.chrome.driver) in the following location: "+System.getProperty("webdriver.chrome.driver"));
-            }
-        }else{
-            logger.info("Chrome driver is available in the system PATH");
-        }
+        checkDriver(chromeDriver);
 
         String url = "http://localhost:3000/";// "http://localhost:9876/";
         int delay = 3000;
@@ -90,21 +47,53 @@ public class App {
 
         logger.info(String.format("Using <url=%s> <delay=%s> <interactions=%s> <load_wait_time=%s> <test_type=%s> <output_dir=%s>", url, delay, interactions, loadWaitTime, testType, outputDir));
 
-        List<ActionRecord> pastActions = new ArrayList<>();
+
         Command command = new Navigate();
         try {
-            command.execute(CommandParams.builder()
-                .url(url)
-                .delay(delay)
-                .interactions(interactions)
-                .loadWaitTime(loadWaitTime)
-                .testType(testType)
-                .outputDir(outputDir)
-                .pastActions(pastActions)
-                .build());
+            command.execute(Navigate.getAuthCommandParams());
             
         } catch (Exception e) {
             logger.error("Error running the test: "+e.getMessage(), e);
         }  
-    }          
+    }    
+
+    private static boolean isBinaryAvailable(String binaryName) {
+        try {
+            // Try to execute the command to find the binary
+            Process process = Runtime.getRuntime().exec("which " + binaryName);
+            //print the output of the command
+            logger.info( new String(process.getInputStream().readAllBytes()));
+            int exitCode = process.waitFor();
+
+            // If the exit code is 0, the binary was found
+            return exitCode == 0;
+        } catch (IOException | InterruptedException e) {
+            // If any exception occurs, assume the binary is not available
+            return false;
+        }
+    }
+
+    private static boolean isWindows() {
+        String osName = System.getProperty("os.name");
+        return osName.startsWith("Windows");
+    }
+    
+    private static void checkDriver(String chromeDriver){
+
+        if( ! isBinaryAvailable(chromeDriver) ){
+
+            logger.info("Chrome driver is not available in the system PATH. Will check if we have a system property set with the correct location (webdriver.chrome.driver)");
+            if( System.getProperty("webdriver.chrome.driver") == null ){
+
+                logger.info("Chrome driver is not set as a system property (webdriver.chrome.driver). Setting a default location for it... ");
+                System.setProperty("webdriver.chrome.driver", "C:\\Users\\luizd\\git\\bedrock-test-automation\\drivers\\123\\chromedriver-win64\\chromedriver.exe");
+                logger.info("Set system property webdriver.chrome.driver with a default location of your chrome driver. Current set location is:  "+System.getProperty("webdriver.chrome.driver"));
+            }else{
+
+                logger.info("Chrome driver is available a system property (webdriver.chrome.driver) in the following location: "+System.getProperty("webdriver.chrome.driver"));
+            }
+        }else{
+            logger.info("Chrome driver is available in the system PATH");
+        }
+    }
 }
