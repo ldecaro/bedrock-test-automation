@@ -1,5 +1,7 @@
 package com.example.selenium.command;
 
+import java.io.File;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +18,8 @@ import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
@@ -52,11 +56,9 @@ public abstract class AbstractNavigation implements Command {
         List<String> pastActions = new ArrayList<>();
         String testCase = params.getTestCase();
 
-
-        //TODO filter the HTML page removing the script piece of it and test again. For now, I'm going with the script.
-                // Open the web browser and navigate to the app's URL
+        // Open the web browser and navigate to the app's URL
         ChromeOptions options = new ChromeOptions();
-        // options.setHeadless(Boolean.TRUE);
+        options.setHeadless(Boolean.TRUE);
         options.addArguments("--remote-allow-origins=*");      
         //TODO implement a tear down that quit() the browser
         final  WebDriver browser = new ChromeDriver(options);
@@ -117,7 +119,6 @@ public abstract class AbstractNavigation implements Command {
                         """, html, testCase, pastActions, interactions-i, elements
             );
 
-            //TODO format the html page and remove the script tag let's see what it comes up with
             //logger.info(prompt);
 
             String response = service.invoke(prompt);
@@ -145,6 +146,13 @@ public abstract class AbstractNavigation implements Command {
 
             if(text.has("status")){
                 logger.info(String.format("Test finished. Status: %s. Explanationn: %s", text.getString("status"), text.getString("explanation")));
+                
+                //take a screenshot
+                File screenshot = ((TakesScreenshot)browser).getScreenshotAs(OutputType.FILE);
+                String screenshotName = String.format("screenshot-%s.png", System.currentTimeMillis());
+                File screenshotFile = new File(screenshotName);
+                Files.copy(screenshot.toPath(), screenshotFile.toPath());
+                logger.info("Screenshot saved to "+screenshotFile.toString());
                 break;
             }
 
