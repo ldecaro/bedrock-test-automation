@@ -1,5 +1,6 @@
 package com.example.selenium.bedrock;
 
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
@@ -9,6 +10,8 @@ import org.json.JSONObject;
 
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
+import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
+import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockruntime.BedrockRuntimeAsyncClient;
 import software.amazon.awssdk.services.bedrockruntime.model.InvokeModelWithResponseStreamRequest;
@@ -36,7 +39,18 @@ public class BedrockClient implements BedrockService {
         }
         this.config = config;
 
+        // Configure the Netty NIO HTTP client with timeout settings
+        SdkAsyncHttpClient httpClient = NettyNioAsyncHttpClient.builder()
+                .readTimeout(Duration.ofSeconds(300))  // Socket read timeout
+                .writeTimeout(Duration.ofSeconds(300))  // Socket write timeout
+                .connectionAcquisitionTimeout(Duration.ofSeconds(10))  // Connection acquisition timeout
+                .connectionTimeout(Duration.ofSeconds(500))  // Connection timeout
+                .connectionMaxIdleTime(Duration.ofSeconds(300))  // Maximum idle time for a connection
+                .tlsNegotiationTimeout(Duration.ofSeconds(350))
+                .build();
+
         client = BedrockRuntimeAsyncClient.builder()
+                .httpClient(httpClient)
                 .credentialsProvider(DefaultCredentialsProvider.create())
                 .region(Region.US_EAST_1)
                 .build();        

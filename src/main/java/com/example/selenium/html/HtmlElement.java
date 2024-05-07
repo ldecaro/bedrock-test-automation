@@ -16,7 +16,8 @@ public class HtmlElement {
 
         this.type = type;
         if( id == null || "".equals(id)){
-            this.id = UUID.randomUUID().toString();
+            String tempId = UUID.randomUUID().toString();
+            this.id = tempId.substring(0, tempId.indexOf("-"));
             idGenerated = Boolean.TRUE;
         }else{
             this.id = id;
