@@ -26,7 +26,6 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
@@ -39,9 +38,10 @@ import com.google.gson.JsonObject;
 public class TestCalculator implements Command {
 
     private static final Logger logger = LogManager.getLogger(App.class);
+    private WebDriver browser;
     
     @Override
-    public void execute(CommandParams params) throws Exception {
+    public Command execute(CommandParams params) throws Exception {
 
         String url = params.getUrl();
         Integer delay = params.getDelay();
@@ -66,7 +66,6 @@ public class TestCalculator implements Command {
         options.setHeadless(Boolean.TRUE);
         options.addArguments("--remote-allow-origins=*");        
 
-        WebDriver browser = new ChromeDriver(options);
         browser.get(url);
 
         // Wait for the elements to load
@@ -191,6 +190,7 @@ public class TestCalculator implements Command {
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
         }
 
@@ -240,7 +240,8 @@ public class TestCalculator implements Command {
         // Save past actions to an output file
         Path pastActionsFile = Paths.get(outputDir, "past_actions.json");
         Files.write(pastActionsFile, gson.toJson(pastActions).getBytes());
-        logger.info("Past actions saved to: " + pastActionsFile);        
+        logger.info("Past actions saved to: " + pastActionsFile);   
+        return this;     
     }
 
     private static String filterHtml(String htmlString) {
@@ -287,4 +288,19 @@ public class TestCalculator implements Command {
             .pastActions(new ArrayList<ActionRecord>())
         .build();
     }
+
+    @Override
+    public Command executeNext(Command c) throws Exception {
+        throw new RuntimeException("not implemented");
+    }
+
+    @Override
+    public void tearDown() throws Exception {
+        
+        //release resources
+        browser.close();
+        browser.quit();
+    }
+
+    
 }

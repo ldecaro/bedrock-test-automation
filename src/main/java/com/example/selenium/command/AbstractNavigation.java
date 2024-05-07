@@ -1,6 +1,7 @@
 package com.example.selenium.command;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -29,11 +30,14 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 
 import com.example.selenium.bedrock.BedrockClient;
 import com.example.selenium.html.HtmlElement;
+import com.googlecode.htmlcompressor.compressor.HtmlCompressor;
 
 public abstract class AbstractNavigation implements Command {
     
     private BedrockClient service = null;
     private static final Logger logger = LogManager.getLogger(AbstractNavigation.class);
+    private WebDriver browser = null;
+    private HtmlCompressor compressor = new HtmlCompressor();
 
     public AbstractNavigation() {
         
@@ -46,7 +50,7 @@ public abstract class AbstractNavigation implements Command {
     }
 
     @Override
-    public void execute(CommandParams params) throws Exception {
+    public Command execute(CommandParams params) throws Exception {
 
 
         String url = params.getUrl();
@@ -60,8 +64,8 @@ public abstract class AbstractNavigation implements Command {
         ChromeOptions options = new ChromeOptions();
         options.setHeadless(Boolean.TRUE);
         options.addArguments("--remote-allow-origins=*");      
-        //TODO implement a tear down that quit() the browser
-        final  WebDriver browser = new ChromeDriver(options);
+
+        browser = new ChromeDriver(options);
         browser.get(url);
 
         String html = null;
@@ -79,80 +83,31 @@ public abstract class AbstractNavigation implements Command {
                 Thread.sleep(delay);
             } catch (InterruptedException e) {
                 e.printStackTrace();
+                Thread.currentThread().interrupt();
             }
     
             elements.addAll(getHtmlElements(browser));
             setIds(browser, elements);
 
             html = cleanHtml(browser.getPageSource());
+            // logger.info("HTML: "+html);
+            logger.info("HTML length: "+html.length());
+            logger.info("HTML COMPRESSED: "+compressor.compress(html).length());
+            String prompt = String.format( getPrompt(), html, testCase, pastActions, interactions-i, elements);
+
             //logger.info("Source:\n "+html);
-
-            String prompt = String.format(
-                """
-                    Human: You are a professional tester testing web applications looking for edge cases that will make the test fail. You provide an output to the next step you need to complete the text case. You can provide values to several inputs at once but one click action only. Your actions must use actionable elements from the input. Provide the information to the next step according to the following instructions:
-
-                    1- One input is the HTML source code of the web page. You will find it inside <code></code> tags.
-                    2- Another input is the description of the test case you are executing. You will find it inside <testcase></testcase> tags
-                    3- Another input is the list of past actions that you have done so far. The first element is the first action of the test and last element is the previous action. You will find it inside <action></action> tags
-            	    4- Another input is the number of available interactions. You will find it inside <available-interactions></available-interactions> tags.
-                    5- Another input is the list of elements available for you to interact with. They are of type input or clickable. You will find it inside <interact></interact> tags
-                    6- Your answer must always be JSON Object containing only the next step. The object should contain a key "explanation" and a key "actions". Key "actions" is an array of JSON objects with keys "action", "id" and "value". Sometimes you need to click an element to visualize the input form. These are the examples:
-                    <examples>
-                    {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"button1","value":"Submit"}, {"action":"input","id":"name-field","value":"John Doe"}, {"action":"input","id":"dropdown-menu","value":"Option 2"}, {"action":"input","id":"email-field","value":"johndoe@example.com"} ]}
-                    {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"link-1","value":"Learn More"}]}
-                    {"explanation":"Click on the button to submit the form","actions": [{"action":"input","id":"name-field","value":"John Doe"}, {"action":"input","id":"dropdown-menu","value":"Option 2"}, {"action":"input","id":"email-field","value":"johndoe@example.com"}, {"action":"click","id":"link-sign-in","value":"SignIn"} ]}
-                    </examples>
-                    7- When test case is completed your answer must be a JSON object with two keys, status and explanation. Here are a few examples:
-                    <examples>
-                    {"status":"success","explanation":"<EXPLANATION>"}
-                    {"status":"failure","explanation":"<EXPLANATION>"}
-                    </examples>
-                    8- For test to finish successfully, your explanation must contain evidence within the source HTML code that conditions to finish the test were met. Do not finish test successfully becore finding evidence within the HTML code.
-
-                    <code>%s</code>
-                    <testcase>%s. Your answer is in JSON format. You execute at least 10 steps before failing. Your actions use elements from the input</testcase>
-                    <actions>%s</actions>
-                    <available-interactions>%s</available-interactions>
-                    <interact>%s</interact>
-                    
-                    Assistant:                        
-                        """, html, testCase, pastActions, interactions-i, elements
-            );
-
-            //logger.info(prompt);
+             logger.info("Prompt Length:"+prompt.length());
 
             String response = service.invoke(prompt);
 
-            //logger.info("**************************");
             logger.info(response);
-            //logger.info("**************************");
 
-            // Parse the response to get the selected element ID and explanation
-            JSONObject jsonResponse = new JSONObject(response);
-            //get content object that is an array of json objects
-            JSONArray content = jsonResponse.getJSONArray("content");
-            //get the first element of the array
-            JSONObject firstElement = content.getJSONObject(0);
-
-           // JSONObject text = new JSONObject(firstElement.getString("text"));
-            JSONObject text = null;
-            String rawResponse = firstElement.getString("text");
-
-            rawResponse = rawResponse.replaceAll("\n", "");
-            //logger.info(rawResponse);
-            // Regular expression pattern to match a JSON object
-
-            text = new JSONObject( rawResponse.substring(rawResponse.indexOf("{"), rawResponse.lastIndexOf("}")+1));
+            JSONObject text = getResponseJSON(response);
 
             if(text.has("status")){
-                logger.info(String.format("Test finished. Status: %s. Explanationn: %s", text.getString("status"), text.getString("explanation")));
-                
+                logger.info(String.format("Test finished. Status: %s. Explanation: %s", text.getString("status"), text.getString("explanation")));   
                 //take a screenshot
-                File screenshot = ((TakesScreenshot)browser).getScreenshotAs(OutputType.FILE);
-                String screenshotName = String.format("screenshot-%s.png", System.currentTimeMillis());
-                File screenshotFile = new File(screenshotName);
-                Files.copy(screenshot.toPath(), screenshotFile.toPath());
-                logger.info("Screenshot saved to "+screenshotFile.toString());
+                screenshot(browser);
                 break;
             }
 
@@ -163,7 +118,6 @@ public abstract class AbstractNavigation implements Command {
             text.put("step", step);
             logger.info(String.format("Step #%s. Explanation: %s", step, explanation));
             
-
             HtmlElement click = null;
             for(int ii=0; ii<actions.length(); ii++){
                 JSONObject action = actions.getJSONObject(ii);
@@ -198,6 +152,7 @@ public abstract class AbstractNavigation implements Command {
             pastActions.add(text.toString());
             elements.clear();
         }
+        return this;
     }
 
     private static String cleanHtml(String htmlString) {
@@ -215,8 +170,17 @@ public abstract class AbstractNavigation implements Command {
             coverageDiv.remove();
         }
 
+        //TODO test updating the HREF value using JSOUP
+        // Remove href and image alts
+        String html = doc.html().replaceAll("\\s+", " ");
+        String hrefPattern = "\\s+href\\s*=\\s*\".*?\"";
+        String altPattern = "\\s+alt\\s*=\\s*\".*?\"";
+        String updatedHtmlCode = html.replaceAll(hrefPattern, "");
+        return updatedHtmlCode.replaceAll(altPattern, "");
+
+
         // Convert HTML object back to a string without additional newlines
-        return doc.html().replaceAll("\\s+", " ");
+        // return 
     }
 
     private void setIds(WebDriver browser, List<HtmlElement> elements){
@@ -293,4 +257,74 @@ public abstract class AbstractNavigation implements Command {
 
         return elements;
     }
+    
+    JSONObject getResponseJSON(String response) throws Exception {
+
+        // Parse the response to get the selected element ID and explanation
+        JSONObject jsonResponse = new JSONObject(response);
+        //get content object that is an array of json objects
+        JSONArray content = jsonResponse.getJSONArray("content");
+        //get the first element of the array
+        JSONObject firstElement = content.getJSONObject(0);
+
+        String rawResponse = firstElement.getString("text");
+
+        rawResponse = rawResponse.replaceAll("\n", "");
+        //extract JSON Object from the response
+        return new JSONObject( rawResponse.substring(rawResponse.indexOf("{"), rawResponse.lastIndexOf("}")+1));
+    }
+    
+    void screenshot(WebDriver browser) throws IOException{
+        File screenshot = ((TakesScreenshot)browser).getScreenshotAs(OutputType.FILE);
+                String screenshotName = String.format("screenshot-%d.png", System.currentTimeMillis());
+                File screenshotFile = new File(screenshotName);
+                Files.copy(screenshot.toPath(), screenshotFile.toPath());
+                logger.info("Screenshot saved to "+screenshotFile.toString());
+    }
+
+    private String getPrompt(){
+       return """
+            Human: You are a professional tester testing web applications looking for edge cases that will make the test fail. You provide an output to the next step you need to complete the text case. You can provide values to several inputs at once but one click action only. Your actions must use actionable elements from the input. Provide the information to the next step according to the following instructions:
+
+            1- One input is the HTML source code of the web page. You will find it inside <code></code> tags.
+            2- Another input is the description of the test case you are executing. You will find it inside <testcase></testcase> tags
+            3- Another input is the list of past actions that you have done so far. The first element is the first action of the test and last element is the previous action. You will find it inside <action></action> tags
+            4- Another input is the number of available interactions. You will find it inside <available-interactions></available-interactions> tags.
+            5- Another input is the list of elements available for you to interact with. They are of type input or clickable. You will find it inside <interact></interact> tags
+            6- Your answer must always be JSON Object containing only the next step. The object should contain a key "explanation" and a key "actions". Key "actions" is an array of JSON objects with keys "action", "id" and "value". Sometimes you need to click an element to visualize the input form. These are the examples:
+            <examples>
+            {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"button1","value":"Submit"}, {"action":"input","id":"name-field","value":"John Doe"}, {"action":"input","id":"dropdown-menu","value":"Option 2"}, {"action":"input","id":"email-field","value":"johndoe@example.com"} ]}
+            {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"link-1","value":"Learn More"}]}
+            {"explanation":"Click on the button to submit the form","actions": [{"action":"input","id":"name-field","value":"John Doe"}, {"action":"input","id":"dropdown-menu","value":"Option 2"}, {"action":"input","id":"email-field","value":"johndoe@example.com"}, {"action":"click","id":"link-sign-in","value":"SignIn"} ]}
+            </examples>
+            7- When test case is completed your answer must be a JSON object with two keys, status and explanation. Here are a few examples:
+            <examples>
+            {"status":"success","explanation":"<EXPLANATION>"}
+            {"status":"failure","explanation":"<EXPLANATION>"}
+            </examples>
+            8- For test to finish successfully, your explanation must contain evidence within the source HTML code that conditions to finish the test were met. Do not finish test successfully becore finding evidence within the HTML code.
+
+            <code>%s</code>
+            <testcase>%s. Your answer is in JSON format. Your answer contain at most only one click action. You execute at least 10 steps before failing. Your actions use elements from the input</testcase>
+            <actions>%s</actions>
+            <available-interactions>%s</available-interactions>
+            <interact>%s</interact>
+            
+            Assistant:                        
+                """;   
+    }
+
+    @Override
+    public Command executeNext(Command c) throws Exception {
+        
+        throw new RuntimeException("no implemented");
+    }
+
+    @Override
+    public void tearDown() throws Exception {
+        //release resources
+        browser.close();
+        browser.quit();
+    }
+    
 }

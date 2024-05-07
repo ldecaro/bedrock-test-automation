@@ -17,7 +17,7 @@ public class App {
 
     private static final Logger logger = LogManager.getLogger(App.class);
 
-    public static void main( String[] args ){
+    public static void main( String[] args ) throws Exception{
 
         System.out.println("Usage: java App <url> <delay> <interactions> <load_wait_time> <test_type> <output_dir>");
         logger.info("Starting tests...");
@@ -45,16 +45,16 @@ public class App {
         testType = args.length > 4 ? args[4] : testType;
         outputDir = args.length > 5 ? args[5] : outputDir;
 
-        logger.info(String.format("Using <url=%s> <delay=%s> <interactions=%s> <load_wait_time=%s> <test_type=%s> <output_dir=%s>", url, delay, interactions, loadWaitTime, testType, outputDir));
-
+        logger.info(String.format("Using <url=%s> <delay=%d> <interactions=%s> <load_wait_time=%d> <test_type=%s> <output_dir=%s>", url, delay, interactions, loadWaitTime, testType, outputDir));
 
         Command command = new Navigate();
         try {
-            command.execute(Navigate.getAuthCommandParams());
+            command.execute(Navigate.getAmazonCommandParams());
             
         } catch (Exception e) {
             logger.error("Error running the test: "+e.getMessage(), e);
         }  
+        command.tearDown();
     }    
 
     private static boolean isBinaryAvailable(String binaryName) {
