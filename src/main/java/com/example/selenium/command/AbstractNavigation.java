@@ -25,8 +25,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
+import org.openqa.selenium.support.ui.FluentWait;
 
 import com.example.selenium.bedrock.BedrockClient;
 import com.example.selenium.html.HtmlElement;
@@ -76,15 +75,23 @@ public abstract class AbstractNavigation implements Command {
 
             Integer step = i+1;  
             
-            WebDriverWait wait = new WebDriverWait(browser, Duration.ofSeconds(loadWaitTime));
-            wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));     
+            // WebDriverWait wait = new WebDriverWait(browser, Duration.ofMillis(loadWaitTime));
+            // wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));   
+            FluentWait<WebDriver> wait = new FluentWait<>(browser);
+            wait.withTimeout(Duration.ofMillis(loadWaitTime));
+            wait.pollingEvery(Duration.ofMillis(250));
+            // wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+            wait.until(browser-> ((JavascriptExecutor)browser).executeScript("return document.readyState").toString().equals("complete"));
             
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-                Thread.currentThread().interrupt();
-            }
+            // IWait<IWebDriver> wait = new OpenQA.Selenium.Support.UI.WebDriverWait(driver, TimeSpan.FromSeconds(30.00));
+            // wait.Until(driver1 => ((IJavaScriptExecutor)driver).ExecuteScript("return document.readyState").Equals("complete"));
+
+            // try {
+            //     Thread.sleep(delay);
+            // } catch (InterruptedException e) {
+            //     e.printStackTrace();
+            //     Thread.currentThread().interrupt();
+            // }
     
             elements.addAll(getHtmlElements(browser));
             setIds(browser, elements);

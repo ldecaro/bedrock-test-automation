@@ -1,12 +1,18 @@
 package com.example.selenium.bedrock;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
+
+import com.example.selenium.command.Navigate;
 
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
@@ -62,6 +68,74 @@ public class BedrockClient implements BedrockService {
         JSONObject messagesApiResponse = invokeModelWithResponseStream(prompt);
         return messagesApiResponse.toString(2);
     }
+
+    public String invokeWithImage(String prompt, File imageLocation){
+
+        JSONObject messagesApiResponse = invokeModelWithResponseStream(prompt, imageLocation);
+        return messagesApiResponse.toString(2);
+    }
+
+    /**
+     * Invokes Anthropic Claude 3 Haiku and processes the response stream.
+     *
+     * @param prompt The prompt for the model to complete.
+     * @return A JSON object containing the complete response along with some metadata.
+     */
+    private JSONObject invokeModelWithResponseStream(String prompt, File imageLocation) {
+
+        //Base64 of image
+        String imageBase64 = encodeImageToBase64(imageLocation);
+
+        String modelId = config.getModelName();
+
+        // Prepare the JSON payload for the Messages API request
+        var payload = new JSONObject()
+                .put("anthropic_version", "bedrock-2023-05-31")
+                .put("max_tokens", config.getMaxTokens())
+                .put("temperature", 0.2)
+                .append("messages", new JSONObject()
+                        .put("role", "user")
+                        .append("content", new JSONObject()                                
+                                        .put("type", "text")
+                                        .put("text", prompt))
+                        .append("content", new JSONObject()
+                                        .put("type", "image")
+                                        .put("source", new JSONObject()
+                                                .put("type", "base64")
+                                                .put("media_type", "image/png")
+                                                .put("data", imageBase64)))
+                        );
+
+        logger.info("Payload:" +payload.toString(2));           
+        // Create the request object using the payload and the model ID
+        var request = InvokeModelWithResponseStreamRequest.builder()
+                .contentType("application/json")
+                .body(SdkBytes.fromUtf8String(payload.toString()))
+                .modelId(modelId)
+                .build();
+
+        // Create a handler to print the stream in real-time and add metadata to a response object
+        JSONObject structuredResponse = new JSONObject();
+        var handler = createMessagesApiResponseStreamHandler(structuredResponse);
+
+        // Invoke the model with the request payload and the response stream handler
+        client.invokeModelWithResponseStream(request, handler).join();
+
+        return structuredResponse;
+    }    
+
+    public static String encodeImageToBase64(File file) {
+
+        byte[] bytes;
+        try (FileInputStream fileInputStream = new FileInputStream(file)){
+            bytes = new byte[(int) file.length()];
+            fileInputStream.read(bytes);
+        } catch (IOException e) {
+            e.printStackTrace();
+            return null;
+        }
+        return Base64.getEncoder().encodeToString(bytes);
+    }    
 
 
     /**
@@ -206,7 +280,10 @@ public class BedrockClient implements BedrockService {
 
         logger.info("Starting client");
         BedrockClient client = new BedrockClient();
-        String response = client.invoke("Write a haiku about the weather");
+        // String response = client.invoke("Write a haiku about the weather");
+        File f = new File("C:\\Users\\luizd\\git\\bedrock-test-automation\\screenshot-1715103499437.png");
+        String response = client.invokeWithImage(Navigate.solveCaptcha().getTestCase(), f);
+
         logger.info(response);
     }
 }
