@@ -13,6 +13,7 @@ import org.apache.logging.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.jsoup.Jsoup;
+import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -170,13 +171,37 @@ public abstract class AbstractNavigation implements Command {
     }
 
     protected static String cleanHtml(String htmlString) {
-        Document doc = Jsoup.parse(htmlString);
+
+        final Document doc = Jsoup.parse(htmlString);
 
         // Remove all script and style elements
         Elements scripts = doc.select("script, style");
         for (Element script : scripts) {
             script.remove();
         }
+        //remove script tags inside the body
+        Document body = Jsoup.parseBodyFragment(doc.select("body").html());
+        body.select("script").remove();
+
+        //remove script and head from inside the iframe
+        Elements iframes = doc.select("iframe");
+
+        // Iterate through the <iframe> elements
+        for (Element iframe : iframes) {
+
+            if(!iframe.attributes().hasKey("srcdoc")) continue;
+            // Parse the content of the <iframe> as a new Document
+            Document iframeDoc = Jsoup.parse(iframe.attributes().get("srcdoc"));
+        
+            // Select all <script> elements within the <head> section of the <iframe>
+            scripts = iframeDoc.select("script");
+        
+            // Remove the selected <script> elements
+            scripts.remove();
+        
+            // Update the <iframe> content with the modified HTML
+            iframe.html(iframeDoc.outerHtml());
+        }        
 
         // Remove the div with id 'coverage'
         Element coverageDiv = doc.selectFirst("#coverage");
@@ -184,13 +209,59 @@ public abstract class AbstractNavigation implements Command {
             coverageDiv.remove();
         }
 
+        //remove the attributes data- attributes from a, ul, div, span, input
+        Elements elementsWithDataAttrs = doc.select("[^data-]");
+        elementsWithDataAttrs.forEach(elem->{
+           
+           List<Attribute> attributes = elem.attributes().asList();
+           attributes.stream().filter(attr->attr.getKey().indexOf("data-") != -1).forEach(attr->elem.removeAttr(attr.getKey()));
+        });
+
+        //if href starts with / we will on try to remove the extra info and update href with information inside the first / and the second /
+        Elements links = doc.select("a");
+        links.stream().forEach(link->{
+
+            String href = link.attr("href");
+            if(href.startsWith("/")){
+                String[] parts = href.split("/");
+                if(parts.length > 2){
+                    link.attr("href", "/"+parts[1]+"/");
+                }
+            }else if(href.startsWith("https")){
+                String[] parts = href.split("/");
+                if(parts.length > 3){
+                    link.attr("href", "https://"+parts[2]);
+                }
+                if( parts.length == 3){
+                    if(parts[2].indexOf("?")!=-1){
+                        link.attr("href", "https://"+parts[2].substring(0, parts[2].indexOf("?")));
+                    }else{
+                        link.attr("href", "https://"+parts[2]);
+                    }
+                }
+            }
+        });
+
+        // Remove the alt attribute from images
+        Elements images = doc.select("img");
+        images.stream().forEach(image->image.removeAttr("alt"));
+        images.stream().forEach(image->image.removeAttr("srcset"));        
+        
+        return doc.html().replaceAll("\\s+", " ");
+
+        // links.stream().forEach(link-> link.a)
+        
+        // List<String> dataAttr = elem.dataset().keySet().stream().filter(s->s.indexOf("data-")!= -1).toList();
+        // dataAttr.forEach(s->elem.removeAttr(s));
+
+
         //TODO test updating the HREF value using JSOUP
         // Remove href and image alts
-        String html = doc.html().replaceAll("\\s+", " ");
-        String hrefPattern = "\\s+href\\s*=\\s*\".*?\"";
-        String altPattern = "\\s+alt\\s*=\\s*\".*?\"";
-        String updatedHtmlCode = html.replaceAll(hrefPattern, "");
-        return updatedHtmlCode.replaceAll(altPattern, "");
+        // String html = doc.html().replaceAll("\\s+", " ");
+        // String hrefPattern = "\\s+href\\s*=\\s*\".*?\"";
+        // String altPattern = "\\s+alt\\s*=\\s*\".*?\"";
+        // String updatedHtmlCode = html.replaceAll(hrefPattern, "");
+        // return updatedHtmlCode.replaceAll(altPattern, "");
 
 
         // Convert HTML object back to a string without additional newlines
