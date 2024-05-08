@@ -3,9 +3,10 @@ package com.example.selenium.command;
 //interface that implements the command pattern
 public interface Command {
 
-    Command execute(CommandParams params) throws Exception;
+    public abstract Command execute() throws Exception;
 
-    void tearDown() throws Exception;
+    public abstract void tearDown() throws Exception;
 
-    Command executeNext(Command c) throws Exception;
+    public abstract Command andThen(Command c) throws Exception;
+
 }

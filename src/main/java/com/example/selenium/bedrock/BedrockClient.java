@@ -12,7 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 
-import com.example.selenium.command.Navigate;
+import com.example.selenium.command.CommandParams;
 
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
@@ -132,7 +132,7 @@ public class BedrockClient implements BedrockService {
             fileInputStream.read(bytes);
         } catch (IOException e) {
             e.printStackTrace();
-            return null;
+            throw new RuntimeException("Could not encode image to Base64. File: "+file.getAbsolutePath(), e);
         }
         return Base64.getEncoder().encodeToString(bytes);
     }    
@@ -282,7 +282,7 @@ public class BedrockClient implements BedrockService {
         BedrockClient client = new BedrockClient();
         // String response = client.invoke("Write a haiku about the weather");
         File f = new File("C:\\Users\\luizd\\git\\bedrock-test-automation\\screenshot-1715103499437.png");
-        String response = client.invokeWithImage(Navigate.solveCaptcha().getTestCase(), f);
+        String response = client.invokeWithImage(CommandParams.getSolveCaptchaParams().getTestCase(), f);
 
         logger.info(response);
     }

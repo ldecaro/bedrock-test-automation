@@ -6,7 +6,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import com.example.selenium.command.Command;
+import com.example.selenium.command.CommandParams;
 import com.example.selenium.command.Navigate;
+import com.example.selenium.command.SolveCaptcha;
 
 
 /**
@@ -47,13 +49,21 @@ public class App {
 
         logger.info(String.format("Using <url=%s> <delay=%d> <interactions=%s> <load_wait_time=%d> <test_type=%s> <output_dir=%s>", url, delay, interactions, loadWaitTime, testType, outputDir));
 
-        Command command = new Navigate();
+        // Command command = new SolveCaptcha(CommandParams.getSolveCaptchaParams());
+        // try {
+        //     command.execute()
+        //         .andThen(new Navigate(
+        //             CommandParams.getTestAmazonShoppingCartParams()));
+        // } catch (Exception e) {
+        //     logger.error("Error running the test: "+e.getMessage(), e);
+        // }  
+        Command command = new Navigate(
+            CommandParams.getTestAmazonShoppingCartParams());
         try {
-            command.execute(Navigate.getAmazonCommandParams());
-            
+            command.execute();
         } catch (Exception e) {
             logger.error("Error running the test: "+e.getMessage(), e);
-        }  
+        }          
         command.tearDown();
     }    
 

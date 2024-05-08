@@ -33,12 +33,13 @@ import com.googlecode.htmlcompressor.compressor.HtmlCompressor;
 
 public abstract class AbstractNavigation implements Command {
     
-    private BedrockClient service = null;
     private static final Logger logger = LogManager.getLogger(AbstractNavigation.class);
-    private WebDriver browser = null;
     private HtmlCompressor compressor = new HtmlCompressor();
+    protected BedrockClient service = null;
+    protected WebDriver browser = null;
+    protected final CommandParams params;
 
-    public AbstractNavigation() {
+    public AbstractNavigation(CommandParams params) {
         
         try{
         	service = new BedrockClient();
@@ -46,25 +47,31 @@ public abstract class AbstractNavigation implements Command {
         	e.printStackTrace();
             throw e;
         }
+        this.params = params;
+    }
+
+    protected void setDriver(WebDriver browser){
+        this.browser = browser;
     }
 
     @Override
-    public Command execute(CommandParams params) throws Exception {
+    public Command execute() throws Exception {
 
 
         String url = params.getUrl();
-        Integer delay = params.getDelay();
+        // Integer delay = params.getDelay();
         Integer interactions = params.getInteractions();
         Integer loadWaitTime = params.getLoadWaitTime();
         List<String> pastActions = new ArrayList<>();
-        String testCase = params.getTestCase();
+        String testCase = params.getTestCase();    
 
-        // Open the web browser and navigate to the app's URL
-        ChromeOptions options = new ChromeOptions();
-        options.setHeadless(Boolean.TRUE);
-        options.addArguments("--remote-allow-origins=*");      
-
-        browser = new ChromeDriver(options);
+        if( browser == null ){
+            // Open the web browser and navigate to the app's URL
+            ChromeOptions options = new ChromeOptions();
+            options.setHeadless(Boolean.TRUE);
+            options.addArguments("--remote-allow-origins=*");  
+            browser = new ChromeDriver(options);
+        }
         browser.get(url);
 
         String html = null;
@@ -104,7 +111,7 @@ public abstract class AbstractNavigation implements Command {
 
             //logger.info("Source:\n "+html);
              logger.info("Prompt Length:"+prompt.length());
-
+            screenshot();
             String response = service.invoke(prompt);
 
             logger.info(response);
@@ -114,7 +121,7 @@ public abstract class AbstractNavigation implements Command {
             if(text.has("status")){
                 logger.info(String.format("Test finished. Status: %s. Explanation: %s", text.getString("status"), text.getString("explanation")));   
                 //take a screenshot
-                screenshot(browser);
+                screenshot();
                 break;
             }
 
@@ -162,7 +169,7 @@ public abstract class AbstractNavigation implements Command {
         return this;
     }
 
-    private static String cleanHtml(String htmlString) {
+    protected static String cleanHtml(String htmlString) {
         Document doc = Jsoup.parse(htmlString);
 
         // Remove all script and style elements
@@ -190,7 +197,7 @@ public abstract class AbstractNavigation implements Command {
         // return 
     }
 
-    private void setIds(WebDriver browser, List<HtmlElement> elements){
+    protected void setIds(WebDriver browser, List<HtmlElement> elements){
 
         elements.stream().filter(elem -> elem.isIdGenerated()).forEach(elem -> {
                 
@@ -198,7 +205,7 @@ public abstract class AbstractNavigation implements Command {
          } );  
     }
 
-    private List<HtmlElement> getHtmlElements(WebDriver browser){
+    protected List<HtmlElement> getHtmlElements(WebDriver browser){
 
         List<HtmlElement> buttons   =   browser.findElements(By.xpath("//button"))
             .stream()
@@ -281,15 +288,17 @@ public abstract class AbstractNavigation implements Command {
         return new JSONObject( rawResponse.substring(rawResponse.indexOf("{"), rawResponse.lastIndexOf("}")+1));
     }
     
-    void screenshot(WebDriver browser) throws IOException{
+    protected File screenshot() throws IOException{
         File screenshot = ((TakesScreenshot)browser).getScreenshotAs(OutputType.FILE);
-                String screenshotName = String.format("screenshot-%d.png", System.currentTimeMillis());
-                File screenshotFile = new File(screenshotName);
-                Files.copy(screenshot.toPath(), screenshotFile.toPath());
-                logger.info("Screenshot saved to "+screenshotFile.toString());
+        String screenshotName = String.format("screenshot-%d.png", System.currentTimeMillis());
+        File screenshotFile = new File(screenshotName);
+        Files.copy(screenshot.toPath(), screenshotFile.toPath());
+        logger.info("Screenshot saved to "+screenshotFile.toString());
+
+        return screenshotFile;
     }
 
-    private String getPrompt(){
+    protected String getPrompt(){
        return """
             Human: You are a professional tester testing web applications looking for edge cases that will make the test fail. You provide an output to the next step you need to complete the text case. You can provide values to several inputs at once but one click action only. Your actions must use actionable elements from the input. Provide the information to the next step according to the following instructions:
 
@@ -322,9 +331,10 @@ public abstract class AbstractNavigation implements Command {
     }
 
     @Override
-    public Command executeNext(Command c) throws Exception {
+    public Command andThen(Command c) throws Exception {
         
-        throw new RuntimeException("no implemented");
+        ((AbstractNavigation)c).setDriver(browser);
+        return c.execute();
     }
 
     @Override

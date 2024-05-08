@@ -39,9 +39,14 @@ public class TestCalculator implements Command {
 
     private static final Logger logger = LogManager.getLogger(App.class);
     private WebDriver browser;
+    private final CommandParams params;
+
+    public TestCalculator(CommandParams params){
+        this.params = params;
+    }
     
     @Override
-    public Command execute(CommandParams params) throws Exception {
+    public Command execute() throws Exception {
 
         String url = params.getUrl();
         Integer delay = params.getDelay();
@@ -290,7 +295,7 @@ public class TestCalculator implements Command {
     }
 
     @Override
-    public Command executeNext(Command c) throws Exception {
+    public Command andThen(Command c) throws Exception {
         throw new RuntimeException("not implemented");
     }
 
