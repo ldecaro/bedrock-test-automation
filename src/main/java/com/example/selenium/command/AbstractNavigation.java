@@ -103,7 +103,7 @@ public abstract class AbstractNavigation implements Command {
     
             elements.addAll(getHtmlElements(browser));
             setIds(browser, elements);
-
+                //TODO remove setIds and search for divs inside the iFrames too. Check how many before and after and check if there's a div from inside the iframe. Just look at the page source if divs inside the iFrame were given Ids
             html = cleanHtml(browser.getPageSource());
             // logger.info("HTML: "+html);
             logger.info("HTML length: "+html.length());
@@ -195,12 +195,15 @@ public abstract class AbstractNavigation implements Command {
         
             // Select all <script> elements within the <head> section of the <iframe>
             scripts = iframeDoc.select("script");
+            //remove script tags inside the body
+            Document bodyIFrameDoc = Jsoup.parseBodyFragment(iframeDoc.select("body").html());
+            bodyIFrameDoc.select("script").remove();
         
             // Remove the selected <script> elements
             scripts.remove();
         
             // Update the <iframe> content with the modified HTML
-            iframe.html(iframeDoc.outerHtml());
+            iframe.attributes().put("srcdoc", iframeDoc.outerHtml());
         }        
 
         // Remove the div with id 'coverage'
@@ -208,6 +211,18 @@ public abstract class AbstractNavigation implements Command {
         if (coverageDiv != null) {
             coverageDiv.remove();
         }
+
+        // Remove class from divs
+        Elements divs = doc.select("div");
+        divs.stream().forEach(div-> div.removeAttr("class"));
+
+        // Remove class from span
+        Elements spans = doc.select("span");
+        spans.stream().forEach(span-> span.removeAttr("class"));
+
+        // Remove class from ul
+        Elements uls = doc.select("ul");
+        uls.stream().forEach(ul-> ul.removeAttr("class"));
 
         //remove the attributes data- attributes from a, ul, div, span, input
         Elements elementsWithDataAttrs = doc.select("[^data-]");
