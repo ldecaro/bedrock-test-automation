@@ -23,10 +23,12 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.OutputType;
 import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.FluentWait;
+import org.openqa.selenium.support.ui.Select;
 
 import com.example.selenium.bedrock.BedrockClient;
 import com.example.selenium.html.HtmlElement;
@@ -70,7 +72,7 @@ public abstract class AbstractNavigation implements Command {
             // Open the web browser and navigate to the app's URL
             ChromeOptions options = new ChromeOptions();
             options.setHeadless(Boolean.TRUE);
-            options.addArguments("--remote-allow-origins=*");  
+            options.addArguments("--remote-allow-origins=*", "--window-size=2560,1440");
             browser = new ChromeDriver(options);
         }
         browser.get(url);
@@ -82,28 +84,15 @@ public abstract class AbstractNavigation implements Command {
         for (int i = 0; i < interactions; i++) {
 
             Integer step = i+1;  
-            
-            // WebDriverWait wait = new WebDriverWait(browser, Duration.ofMillis(loadWaitTime));
-            // wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));   
+
             FluentWait<WebDriver> wait = new FluentWait<>(browser);
             wait.withTimeout(Duration.ofMillis(loadWaitTime));
             wait.pollingEvery(Duration.ofMillis(250));
-            // wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
             wait.until(browser-> ((JavascriptExecutor)browser).executeScript("return document.readyState").toString().equals("complete"));
-            
-            // IWait<IWebDriver> wait = new OpenQA.Selenium.Support.UI.WebDriverWait(driver, TimeSpan.FromSeconds(30.00));
-            // wait.Until(driver1 => ((IJavaScriptExecutor)driver).ExecuteScript("return document.readyState").Equals("complete"));
-
-            // try {
-            //     Thread.sleep(delay);
-            // } catch (InterruptedException e) {
-            //     e.printStackTrace();
-            //     Thread.currentThread().interrupt();
-            // }
     
             elements.addAll(getHtmlElements(browser));
-            setIds(browser, elements);
-                //TODO remove setIds and search for divs inside the iFrames too. Check how many before and after and check if there's a div from inside the iframe. Just look at the page source if divs inside the iFrame were given Ids
+            //setIds(browser, elements);
+            //TODO remove setIds and search for divs inside the iFrames too. Check how many before and after and check if there's a div from inside the iframe. Just look at the page source if divs inside the iFrame were given Ids
             html = cleanHtml(browser.getPageSource());
             // logger.info("HTML: "+html);
             logger.info("HTML length: "+html.length());
@@ -133,25 +122,7 @@ public abstract class AbstractNavigation implements Command {
             text.put("step", step);
             logger.info(String.format("Step #%s. Explanation: %s", step, explanation));
             
-            HtmlElement click = null;
-            for(int ii=0; ii<actions.length(); ii++){
-                JSONObject action = actions.getJSONObject(ii);
-                if( "input".equals(action.getString("action")) ){
-
-                    Optional<HtmlElement> element = elements.stream().filter(elem-> elem.getId().equals(action.getString("id"))).findFirst();
-                    if(element.isPresent()){
-                        ((JavascriptExecutor)browser).executeScript("arguments[0].focus();", element.get().getElement());
-                        element.get().getElement().sendKeys(Keys.chord(Keys.CONTROL, "a"), action.getString("value"));
-                        logger.info("Inputted value "+action.getString("value")+" on "+element.get().getId());                        
-                    }
-                }else if( "click".equals(action.getString("action")) ){
-                    
-                    Optional<HtmlElement> webElement = elements.stream().filter(e-> action.getString("id").equals(e.getId())).findFirst();
-                    if(webElement.isPresent()){
-                        click = webElement.get();
-                    }
-                }
-            }
+            HtmlElement click = inputData(elements, actions);
 
             if( click == null){
                 logger.info("No click action found");
@@ -162,12 +133,54 @@ public abstract class AbstractNavigation implements Command {
             }
 
             logger.info("Clicking on "+click.getId());
-            new Actions(browser).moveToElement(click.getElement()).click().perform();
+            click.getElement().click();
+            //new Actions(browser).moveToElement(click.getElement()).click().perform();
             
             pastActions.add(text.toString());
             elements.clear();
         }
         return this;
+    }
+
+    private HtmlElement inputData(List<HtmlElement> elements, JSONArray actions ){
+
+        HtmlElement click = null;
+
+        for(int ii=0; ii<actions.length(); ii++){
+            JSONObject action = actions.getJSONObject(ii);
+            if( "input".equals(action.getString("action")) ){
+
+                String value = action.getString("value");
+                Optional<HtmlElement> element = elements.stream().filter(elem-> elem.getId().equals(action.getString("id"))).findFirst();
+                if(element.isPresent()){
+
+                    if(("select").equals(element.get().getElement().getTagName().toLowerCase())){
+
+                        Select select = new Select( element.get().getElement()) ;
+                        select.selectByValue(value);
+                        Optional<WebElement> option = select.getOptions().stream().filter(o-> o.isSelected()).findFirst();
+                        if(option.isPresent()){
+                            option.get().sendKeys(Keys.ENTER);
+                        }
+                        // new Actions(browser).sendKeys(Keys.ENTER).perform();
+                        try{
+                            screenshot();}catch(Exception e){e.printStackTrace();}
+                    }else{
+
+                        ((JavascriptExecutor)browser).executeScript("arguments[0].focus();", element.get().getElement());
+                        element.get().getElement().sendKeys(Keys.chord(Keys.CONTROL, "a"), value);
+                        logger.info("Inputted value "+value+" on "+element.get().getId());      
+                    }                  
+                }
+            }else if( "click".equals(action.getString("action")) ){
+                
+                Optional<HtmlElement> webElement = elements.stream().filter(e-> action.getString("id").equals(e.getId())).findFirst();
+                if(webElement.isPresent()){
+                    click = webElement.get();
+                }
+            }
+        }
+        return click;
     }
 
     protected static String cleanHtml(String htmlString) {
@@ -297,6 +310,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
+            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("clickable")
@@ -308,6 +322,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
+            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("input")
@@ -319,6 +334,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
+            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("clickable")
@@ -330,6 +346,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
+            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("input")
@@ -337,13 +354,38 @@ public abstract class AbstractNavigation implements Command {
                 .build())
             .toList();           
 
+        List<HtmlElement> select = browser.findElements(By.tagName("select"))
+            .stream()
+            .filter(e->e.isDisplayed())
+            .filter(e->e.isEnabled())
+            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .map(e-> HtmlElement.builder()
+                .id(e.getAttribute("id"))
+                .type("input")
+                .element(e)
+                .build())
+            .toList();              
+
         List<HtmlElement> clickable = browser.findElements(By.xpath("//*[not(self::button or self::a or self::input)][@onclick or contains(@onclick, 'click')]"))
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
+            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("clickable")
+                .element(e)
+                .build())
+            .toList(); 
+
+        List<HtmlElement> span = browser.findElements(By.tagName("span"))
+            .stream()
+            .filter(e->e.isDisplayed())
+            .filter(e->e.isEnabled())
+            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .map(e-> HtmlElement.builder()
+                .id(e.getAttribute("id"))
+                .type("input")
                 .element(e)
                 .build())
             .toList(); 
@@ -353,7 +395,9 @@ public abstract class AbstractNavigation implements Command {
         elements.addAll(inputs);
         elements.addAll(anchors);
         elements.addAll(textarea);
+        elements.addAll(select);
         elements.addAll(clickable);
+        elements.addAll(span);
 
         return elements;
     }
