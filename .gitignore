@@ -1,5 +1,11 @@
 # Compiled class file
 *.class
+target*
+
+#drivers
+drivers*
+
+state*
 
 # Log file
 *.log
