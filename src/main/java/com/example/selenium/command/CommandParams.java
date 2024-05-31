@@ -13,6 +13,7 @@ public class CommandParams {
     private String outputDir = "C:\\Users\\luizd\\git\\genai-selenium\\target\\output";
     private List<ActionRecord> pastActions = new ArrayList<>();
     private String testCase = "";
+    private Boolean setIds = Boolean.FALSE;
 
     private CommandParams() {
     }
@@ -42,6 +43,11 @@ public class CommandParams {
     public String getTestCase() {
         return testCase;
     }
+    public Boolean setIds() {
+        return setIds;
+    }
+
+    //builder pattern to create CommandParams using fluent language
     public static Builder builder() {
         return new Builder();
     }
@@ -88,6 +94,10 @@ public class CommandParams {
             params.testCase = testCase;
             return this;
         }
+        public Builder setIds(Boolean setIds) {
+            params.setIds = setIds;
+            return this;
+        }
 
         public CommandParams build() {
             if(params.url == null){
@@ -96,6 +106,47 @@ public class CommandParams {
             return params;
         }
     }
+
+    public static CommandParams getLoginFFQ(){
+        
+        return CommandParams.builder()
+            .url("URL")
+            .delay(3000)
+            .interactions(100)
+            .loadWaitTime(5000)
+            .testType("bedrock")
+            .outputDir("")
+            .setIds(Boolean.TRUE)
+            .pastActions(new ArrayList<ActionRecord>())
+            .testCase("""
+                    You need to authenticate in an Okta application. Athentication has 3 steps. Input username (myID) and use USERNAME. Input password and use PASSWORD. Then choose a second factor verification and choose Get a push notification. The test finishes successfully when you are able to request a push notification. The test fails if you cannot authenticate after 10 retries or if you cannot find an action after 2 retries.
+            """) // when you authenticate and you land on an insurance quoting application or Farmers Insurance FastQuote application
+        .build();
+    }       
+
+    public static CommandParams getFFQQuote(){
+        
+        return CommandParams.builder()
+            .url("URL")
+            .delay(3000)
+            .interactions(100)
+            .loadWaitTime(5000)
+            .testType("bedrock")
+            .outputDir("")
+            .setIds(Boolean.TRUE)
+            .pastActions(new ArrayList<ActionRecord>())
+            .testCase("""
+                    You are testing the an insurance quoting app. 
+                    You will create a new insurance quote (get a new quote) for a Business.
+                    Click on product type Business. 
+                    Use zip code 92646.
+                    Click on start a new quote.
+                    Generate values for input fields and submit request for a new quote.  
+                    The test case finishes successfully once you are able to request a new quote for a business.
+                    If you receive an error page explaining we are not available or if you could not reach the quote submission form for some reason the test fails.
+            """)
+        .build();
+    }    
 
     public static CommandParams getAuthCommandParams(){
         
@@ -106,12 +157,14 @@ public class CommandParams {
             .loadWaitTime(5000)
             .testType("bedrock")
             .outputDir("")
+            .setIds(Boolean.TRUE)
             .pastActions(new ArrayList<ActionRecord>())
             .testCase("""
-                    You are testing the authentication mechanism of this web application. Your login is bexiga@gmail.com and your password is 2024welcome1. The test case finsishes successfully once you are able to input authetication details and presented with a page containing issues for the bazinga blitz. Show me how many issues are there
+                    You are testing the authentication mechanism of this web application. Your login is EMAIL and your password is PASSWORD. Click Sign in button then input email and continue and input password and continue. The test case finishes successfully once you are able to input authetication details, login and visualize a page with a list of Backlogs. Tell me how much backlog exists for Bazinga Blitz.
             """)
         .build();
     }
+    // presented with a page containing issues for the Bazinga Blitz. Show me how many issues are there
 
     public static CommandParams getTestAmazonShoppingCartParams(){
         
@@ -122,9 +175,10 @@ public class CommandParams {
             .loadWaitTime(5000)
             .testType("bedrock")
             .outputDir("")
+            .setIds(Boolean.FALSE)
             .pastActions(new ArrayList<ActionRecord>())
             .testCase("""
-                    You are testing the amazon.com web application. I want you to add the most expensive box of toilet paper into the shopping cart. The test cases finishes when the box of toilet paper is visible within the cart. Show the item listed in the shopping cart.
+                    You are testing the amazon.com web application. Your test case is to add to cart the most expensive pen. The test case finishes when the pen is visible within the cart. You should monitor the number of items in the cart.
             """)
         .build();
     }    

@@ -92,7 +92,7 @@ public class BedrockClient implements BedrockService {
         var payload = new JSONObject()
                 .put("anthropic_version", "bedrock-2023-05-31")
                 .put("max_tokens", config.getMaxTokens())
-                .put("temperature", 0.2)
+                .put("temperature", 0.25)
                 .append("messages", new JSONObject()
                         .put("role", "user")
                         .append("content", new JSONObject()                                
@@ -106,7 +106,7 @@ public class BedrockClient implements BedrockService {
                                                 .put("data", imageBase64)))
                         );
 
-        logger.info("Payload:" +payload.toString(2));           
+        // logger.info("Payload:" +payload.toString(2));           
         // Create the request object using the payload and the model ID
         var request = InvokeModelWithResponseStreamRequest.builder()
                 .contentType("application/json")

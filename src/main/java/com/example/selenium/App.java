@@ -48,24 +48,57 @@ public class App {
         outputDir = args.length > 5 ? args[5] : outputDir;
 
         logger.info(String.format("Using <url=%s> <delay=%d> <interactions=%s> <load_wait_time=%d> <test_type=%s> <output_dir=%s>", url, delay, interactions, loadWaitTime, testType, outputDir));
+        
+        // goJiraClone();
+        // goFFQ();
+        goAmazonCart();
+    }    
 
-        // Command command = new SolveCaptcha(CommandParams.getSolveCaptchaParams());
+    private static void goAmazonCart() throws Exception{
+
+        // Command command = new Navigate(CommandParams.getTestAmazonShoppingCartParams());
         // try {
-        //     command.execute()
-        //         .andThen(new Navigate(
-        //             CommandParams.getTestAmazonShoppingCartParams()));
+        //     command.execute();
         // } catch (Exception e) {
         //     logger.error("Error running the test: "+e.getMessage(), e);
-        // }  
-        Command command = new Navigate(
-            CommandParams.getTestAmazonShoppingCartParams());
+        // }
+        // command.tearDown();
+
+        Command command = new SolveCaptcha(CommandParams.getSolveCaptchaParams());
+        try {
+            command.execute()
+                .andThen(new Navigate(
+                    CommandParams.getTestAmazonShoppingCartParams()));
+        } catch (Exception e) {
+            logger.error("Error running the test: "+e.getMessage(), e);
+        }  
+        command.tearDown();        
+    }
+
+
+    private static void goJiraClone() throws Exception{
+
+        Command command = new Navigate(CommandParams.getAuthCommandParams());
         try {
             command.execute();
         } catch (Exception e) {
             logger.error("Error running the test: "+e.getMessage(), e);
+        }
+        command.tearDown();
+    }
+
+    private static void goFFQ() throws Exception{
+
+        Command command = new Navigate(
+            CommandParams.getLoginFFQ() );
+        try {
+            command.execute()
+                .andThen(new Navigate(CommandParams.getFFQQuote()));
+        } catch (Exception e) {
+            logger.error("Error running the test: "+e.getMessage(), e);
         }          
         command.tearDown();
-    }    
+    }
 
     private static boolean isBinaryAvailable(String binaryName) {
         try {
@@ -96,7 +129,7 @@ public class App {
             if( System.getProperty("webdriver.chrome.driver") == null ){
 
                 logger.info("Chrome driver is not set as a system property (webdriver.chrome.driver). Setting a default location for it... ");
-                System.setProperty("webdriver.chrome.driver", "C:\\Users\\luizd\\git\\bedrock-test-automation\\drivers\\123\\chromedriver-win64\\chromedriver.exe");
+                System.setProperty("webdriver.chrome.driver", "/Users/lddecaro/git/bedrock-test-automation/driver/chromedriver-mac-arm64/chromedriver");
                 logger.info("Set system property webdriver.chrome.driver with a default location of your chrome driver. Current set location is:  "+System.getProperty("webdriver.chrome.driver"));
             }else{
 

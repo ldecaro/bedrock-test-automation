@@ -16,6 +16,7 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Attribute;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -71,80 +72,90 @@ public abstract class AbstractNavigation implements Command {
         if( browser == null ){
             // Open the web browser and navigate to the app's URL
             ChromeOptions options = new ChromeOptions();
-            options.setHeadless(Boolean.TRUE);
+            // options.setHeadless(Boolean.TRUE);
             options.addArguments("--remote-allow-origins=*", "--window-size=2560,1440");
             browser = new ChromeDriver(options);
-        }
-        browser.get(url);
 
+            browser.get(url);
+            Thread.sleep(loadWaitTime);
+        }
         String html = null;
         final List<HtmlElement> elements = new ArrayList<>();
 
         // Start testing
         for (int i = 0; i < interactions; i++) {
 
-            Integer step = i+1;  
+            try{
+                Integer step = i+1;  
 
-            FluentWait<WebDriver> wait = new FluentWait<>(browser);
-            wait.withTimeout(Duration.ofMillis(loadWaitTime));
-            wait.pollingEvery(Duration.ofMillis(250));
-            wait.until(browser-> ((JavascriptExecutor)browser).executeScript("return document.readyState").toString().equals("complete"));
-    
-            elements.addAll(getHtmlElements(browser));
-            //setIds(browser, elements);
-            //TODO remove setIds and search for divs inside the iFrames too. Check how many before and after and check if there's a div from inside the iframe. Just look at the page source if divs inside the iFrame were given Ids
-            html = cleanHtml(browser.getPageSource());
-            // logger.info("HTML: "+html);
-            logger.info("HTML length: "+html.length());
-            logger.info("HTML COMPRESSED: "+compressor.compress(html).length());
-            String prompt = String.format( getPrompt(), html, testCase, pastActions, interactions-i, elements);
+                FluentWait<WebDriver> wait = new FluentWait<>(browser);
+                wait.withTimeout(Duration.ofMillis(loadWaitTime));
+                wait.pollingEvery(Duration.ofMillis(250));
+                wait.until(browser-> ((JavascriptExecutor)browser).executeScript("return document.readyState").toString().equals("complete"));
+        
+                elements.addAll(getHtmlElements(browser, params.setIds()));
+                if( params.setIds() )
+                    setIds(browser, elements);
+                //TODO remove setIds and search for divs inside the iFrames too. Check how many before and after and check if there's a div from inside the iframe. Just look at the page source if divs inside the iFrame were given Ids
+                html = cleanHtml(browser.getPageSource());
+                // logger.info("HTML: "+html);
+                logger.info("HTML length: "+html.length());
+                logger.info("HTML COMPRESSED: "+compressor.compress(html).length());
+                String prompt = String.format( getPrompt(), html, testCase, pastActions, interactions-i, elements);
 
-            //logger.info("Source:\n "+html);
-             logger.info("Prompt Length:"+prompt.length());
-            screenshot();
-            String response = service.invoke(prompt);
+                //logger.info("Source:\n "+html);
+                logger.info("Prompt Length:"+prompt.length());
+                // screenshot();
+                String response = service.invoke(prompt);
 
-            logger.info(response);
+                logger.info(response);
 
-            JSONObject text = getResponseJSON(response);
+                JSONObject text = getResponseJSON(response);
 
-            if(text.has("status")){
-                logger.info(String.format("Test finished. Status: %s. Explanation: %s", text.getString("status"), text.getString("explanation")));   
-                //take a screenshot
-                screenshot();
-                break;
-            }
+                if(text.has("status")){
+                    logger.info(String.format("Test finished. Status: %s. Explanation: %s", text.getString("status"), text.getString("explanation")));   
+                    //take a screenshot
+                    screenshot();
+                    break;
+                }
 
-            JSONArray actions = text.getJSONArray("actions");
-            String explanation = text.getString("explanation");
+                JSONArray actions = text.getJSONArray("actions");
+                String explanation = text.getString("explanation");
 
-            //add step information inside the JSONObject text
-            text.put("step", step);
-            logger.info(String.format("Step #%s. Explanation: %s", step, explanation));
-            
-            HtmlElement click = inputData(elements, actions);
+                //add step information inside the JSONObject text
+                text.put("step", step);
+                logger.info(String.format("Step #%s. Explanation: %s", step, explanation));
+                
+                List<HtmlElement> click = inputData(elements, actions);
 
-            if( click == null){
-                logger.info("No click action found");
+                if( click.isEmpty() ){
+                    logger.info("No click action found");
+                    pastActions.add(text.toString());
+                    elements.clear();
+                    new Actions(browser).sendKeys(Keys.TAB, Keys.ENTER).perform();
+                    continue;
+                }
+                click.stream().forEach( c->{
+                    logger.info("Clicking on "+c.getId());
+                    c.getElement().click();
+                });
+                //new Actions(browser).moveToElement(click.getElement()).click().perform();
+                
                 pastActions.add(text.toString());
-                elements.clear();
-                new Actions(browser).sendKeys(Keys.TAB, Keys.ENTER).perform();
-                continue;
-            }
 
-            logger.info("Clicking on "+click.getId());
-            click.getElement().click();
-            //new Actions(browser).moveToElement(click.getElement()).click().perform();
-            
-            pastActions.add(text.toString());
+            }catch(Exception e){
+                // logger.error(e.getMessage());
+                logger.error("Clicked on something that didn't work (possible element that is not visible). Will continue with the next action....");
+                logger.error(e.getMessage());
+            }
             elements.clear();
         }
         return this;
     }
 
-    private HtmlElement inputData(List<HtmlElement> elements, JSONArray actions ){
+    private List<HtmlElement> inputData(List<HtmlElement> elements, JSONArray actions ){
 
-        HtmlElement click = null;
+        List<HtmlElement> click = new ArrayList<>();
 
         for(int ii=0; ii<actions.length(); ii++){
             JSONObject action = actions.getJSONObject(ii);
@@ -176,7 +187,7 @@ public abstract class AbstractNavigation implements Command {
                 
                 Optional<HtmlElement> webElement = elements.stream().filter(e-> action.getString("id").equals(e.getId())).findFirst();
                 if(webElement.isPresent()){
-                    click = webElement.get();
+                    click.add(webElement.get());
                 }
             }
         }
@@ -195,6 +206,8 @@ public abstract class AbstractNavigation implements Command {
         //remove script tags inside the body
         Document body = Jsoup.parseBodyFragment(doc.select("body").html());
         body.select("script").remove();
+
+        removeComments(body);
 
         //remove script and head from inside the iframe
         Elements iframes = doc.select("iframe");
@@ -276,24 +289,18 @@ public abstract class AbstractNavigation implements Command {
         images.stream().forEach(image->image.removeAttr("srcset"));        
         
         return doc.html().replaceAll("\\s+", " ");
+    }
 
-        // links.stream().forEach(link-> link.a)
-        
-        // List<String> dataAttr = elem.dataset().keySet().stream().filter(s->s.indexOf("data-")!= -1).toList();
-        // dataAttr.forEach(s->elem.removeAttr(s));
-
-
-        //TODO test updating the HREF value using JSOUP
-        // Remove href and image alts
-        // String html = doc.html().replaceAll("\\s+", " ");
-        // String hrefPattern = "\\s+href\\s*=\\s*\".*?\"";
-        // String altPattern = "\\s+alt\\s*=\\s*\".*?\"";
-        // String updatedHtmlCode = html.replaceAll(hrefPattern, "");
-        // return updatedHtmlCode.replaceAll(altPattern, "");
-
-
-        // Convert HTML object back to a string without additional newlines
-        // return 
+    private static void removeComments(Node node) {
+        for (int i = 0; i < node.childNodeSize();) {
+            Node child = node.childNode(i);
+            if (child.nodeName().equals("#comment"))
+                child.remove();
+            else {
+                removeComments(child);
+                i++;
+            }
+        }
     }
 
     protected void setIds(WebDriver browser, List<HtmlElement> elements){
@@ -304,13 +311,13 @@ public abstract class AbstractNavigation implements Command {
          } );  
     }
 
-    protected List<HtmlElement> getHtmlElements(WebDriver browser){
+    protected List<HtmlElement> getHtmlElements(WebDriver browser, final Boolean allElements){
 
         List<HtmlElement> buttons   =   browser.findElements(By.xpath("//button"))
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
-            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .filter(e->  allElements || (e.getAttribute("id")!=null && !"".equals(e.getAttribute("id"))))
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("clickable")
@@ -322,7 +329,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
-            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .filter(e->  allElements || (e.getAttribute("id")!=null && !"".equals(e.getAttribute("id"))))
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("input")
@@ -334,7 +341,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
-            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .filter(e->  allElements || (e.getAttribute("id")!=null && !"".equals(e.getAttribute("id"))))
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("clickable")
@@ -346,7 +353,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
-            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .filter(e->  allElements || (e.getAttribute("id")!=null && !"".equals(e.getAttribute("id"))))
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("input")
@@ -358,7 +365,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
-            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .filter(e->  allElements || (e.getAttribute("id")!=null && !"".equals(e.getAttribute("id"))))
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("input")
@@ -370,7 +377,7 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
-            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .filter(e->  allElements || (e.getAttribute("id")!=null && !"".equals(e.getAttribute("id"))))
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
                 .type("clickable")
@@ -382,10 +389,10 @@ public abstract class AbstractNavigation implements Command {
             .stream()
             .filter(e->e.isDisplayed())
             .filter(e->e.isEnabled())
-            .filter(e-> e.getAttribute("id")!=null && !"".equals(e.getAttribute("id")) )
+            .filter(e->  allElements || (e.getAttribute("id")!=null && !"".equals(e.getAttribute("id"))))
             .map(e-> HtmlElement.builder()
                 .id(e.getAttribute("id"))
-                .type("input")
+                .type("clickable")
                 .element(e)
                 .build())
             .toList(); 
@@ -430,14 +437,14 @@ public abstract class AbstractNavigation implements Command {
 
     protected String getPrompt(){
        return """
-            Human: You are a professional tester testing web applications looking for edge cases that will make the test fail. You provide an output to the next step you need to complete the text case. You can provide values to several inputs at once but one click action only. Your actions must use actionable elements from the input. Provide the information to the next step according to the following instructions:
+            Human: You are a professional tester testing web applications. You provide the output to the next step you need to execute to complete the test case. You can provide values to several inputs at once but one click action only on each step. Your actions must use actionable elements from the input. Provide the information to the next step according to the following instructions:
 
             1- One input is the HTML source code of the web page. You will find it inside <code></code> tags.
             2- Another input is the description of the test case you are executing. You will find it inside <testcase></testcase> tags
             3- Another input is the list of past actions that you have done so far. The first element is the first action of the test and last element is the previous action. You will find it inside <action></action> tags
             4- Another input is the number of available interactions. You will find it inside <available-interactions></available-interactions> tags.
             5- Another input is the list of elements available for you to interact with. They are of type input or clickable. You will find it inside <interact></interact> tags
-            6- Your answer must always be JSON Object containing only the next step. The object should contain a key "explanation" and a key "actions". Key "actions" is an array of JSON objects with keys "action", "id" and "value". Sometimes you need to click an element to visualize the input form. These are the examples:
+            6- Your answer must always be JSON Object containing the next step or a test case completed response type. The next step object should contain a key "explanation" and a key "actions". Key "actions" is an array of JSON objects with keys "action", "id" and "value". Sometimes you need to click an element to visualize the input form. These are the examples:
             <examples>
             {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"button1","value":"Submit"}, {"action":"input","id":"name-field","value":"John Doe"}, {"action":"input","id":"dropdown-menu","value":"Option 2"}, {"action":"input","id":"email-field","value":"johndoe@example.com"} ]}
             {"explanation":"Click on the button to submit the form","actions":[{"action":"click","id":"link-1","value":"Learn More"}]}
@@ -448,17 +455,17 @@ public abstract class AbstractNavigation implements Command {
             {"status":"success","explanation":"<EXPLANATION>"}
             {"status":"failure","explanation":"<EXPLANATION>"}
             </examples>
-            8- For test to finish successfully, your explanation must contain evidence within the source HTML code that conditions to finish the test were met. Do not finish test successfully becore finding evidence within the HTML code.
+            8- For test to finish successfully, your explanation must contain evidence within the source HTML code that conditions to finish the test were met. Do not finish test successfully before finding evidence within the HTML code.
 
             <code>%s</code>
-            <testcase>%s. Your answer is in JSON format. Your answer contain at most only one click action. You execute at least 10 steps before failing. Your actions use elements from the input</testcase>
+            <testcase>%s The test fails if you cannot complete the action after the number of available interactions gets to 0 or if you cannot complete the action for another reason.</testcase>
             <actions>%s</actions>
             <available-interactions>%s</available-interactions>
-            <interact>%s</interact>
+            <interact>%s</interact>.
             
-            Assistant:                        
+            Answer in JSON format:                        
                 """;   
-    }
+    }// Your answer is in JSON format. Your answer contain at most only one click action. You execute at least 10 steps before failing. Your actions use elements from the input
 
     @Override
     public Command andThen(Command c) throws Exception {
