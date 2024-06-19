@@ -8,7 +8,7 @@ This project implements an automated web UI testing framework using Selenium to 
 
 The solution can execute different types of test cases for authentication, creation of tickets, searching for products, adding products into shopping cart, empty shopping cart etc. It simulates clicking buttons, entering data and more to try to execute a functional test case in the application. You can run this project locally or remotelly within a AWS VPC as shown in the diagram:
 
-<img src="./imgs/test-automation-arch-3.png" width="1000" height="500">
+<img src="./imgs/test-automation-arch-4.png" width="1000" height="500">
 
 ## Requirements
 To run this project, the following are needed:
