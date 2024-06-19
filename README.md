@@ -7,6 +7,7 @@ This project implements an automated web UI testing framework that remotely cont
 ## What it does
 
 The solution can execute different types of test cases for authentication, creation of tickets, searching for products, adding products into shopping cart, empty shopping cart etc. It simulates clicking buttons, entering data and more to try to execute a functional test case in a web application. You can integreate this test automation tool with any sort of pipeline using the architecture below:
+
 <img src="./imgs/test-automation-arch.png">
 
 ## Requirements
