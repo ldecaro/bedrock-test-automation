@@ -9,6 +9,7 @@ import com.example.selenium.command.Command;
 import com.example.selenium.command.CommandParams;
 import com.example.selenium.command.Navigate;
 import com.example.selenium.command.SolveCaptcha;
+import com.example.selenium.sqs.MessageHandler;
 
 
 /**
@@ -21,83 +22,52 @@ public class App {
 
     public static void main( String[] args ) throws Exception{
 
-        System.out.println("Usage: java App <url> <delay> <interactions> <load_wait_time> <test_type> <output_dir>");
-        logger.info("Starting tests...");
+        try{
+            logger.info("Starting tests...");
 
-        String chromeDriver = null;
-        if( isWindows() ){
-            chromeDriver = "chromedriver.exe";
-        }else{
-            chromeDriver = "chromedriver";
+            checkDriver();
+
+            String useSqs = System.getProperty("test-automation.use.sqs");
+            if( useSqs != null && useSqs.equals("true")){
+
+                logger.info("Reading from SQS");
+                MessageHandler sqsHandler = new MessageHandler();
+                sqsHandler.processMessages();
+
+            }else{
+
+                runTestAmazonCart();
+                
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+            throw e;
         }
-
-        checkDriver(chromeDriver);
-
-        String url = "http://localhost:3000/";// "http://localhost:9876/";
-        int delay = 3000;
-        int interactions = 100;
-        int loadWaitTime = 5000;
-        String testType = "bedrock";
-        String outputDir = "C:\\Users\\luizd\\git\\bedrock-test-automation\\target\\output";        
-
-        url = args.length > 0 ? args[0] : url;
-        delay = args.length > 1 ? Integer.parseInt(args[1]) : delay;
-        interactions = args.length > 2 ? Integer.parseInt(args[2]) : interactions;
-        loadWaitTime = args.length > 3 ? Integer.parseInt(args[3]) : loadWaitTime;
-        testType = args.length > 4 ? args[4] : testType;
-        outputDir = args.length > 5 ? args[5] : outputDir;
-
-        logger.info(String.format("Using <url=%s> <delay=%d> <interactions=%s> <load_wait_time=%d> <test_type=%s> <output_dir=%s>", url, delay, interactions, loadWaitTime, testType, outputDir));
-        
-        // goJiraClone();
-        // goFFQ();
-        goAmazonCart();
-    }    
-
-    private static void goAmazonCart() throws Exception{
-
-        // Command command = new Navigate(CommandParams.getTestAmazonShoppingCartParams());
-        // try {
-        //     command.execute();
-        // } catch (Exception e) {
-        //     logger.error("Error running the test: "+e.getMessage(), e);
-        // }
-        // command.tearDown();
-
-        Command command = new SolveCaptcha(CommandParams.getSolveCaptchaParams());
-        try {
-            command.execute()
-                .andThen(new Navigate(
-                    CommandParams.getTestAmazonShoppingCartParams()));
-        } catch (Exception e) {
-            logger.error("Error running the test: "+e.getMessage(), e);
-        }  
-        command.tearDown();        
     }
 
 
-    private static void goJiraClone() throws Exception{
+    private static void runTestAmazonCart() throws Exception{
 
-        Command command = new Navigate(CommandParams.getAuthCommandParams());
         try {
-            command.execute();
+            new SolveCaptcha(CommandParams.builder()
+                .url("https://www.amazon.com/")
+                .testCase("""
+                        Human: Answer the following captcha. Your answer should output ONLY the value of the captcha
+                        Assistant: The answer to the captcha is 
+                """)
+                .build())
+            .execute()
+            .andThen(new Navigate(CommandParams.builder()
+                .url("https://www.amazon.com/")
+                .testCase("""
+                        You are testing the amazon.com web application. Your test case is to add to cart the most expensive pen. The test case finishes when the pen is visible within the cart. You should monitor the number of items in the cart.
+                """)
+                .build()))
+            .tearDown();
+            
         } catch (Exception e) {
             logger.error("Error running the test: "+e.getMessage(), e);
-        }
-        command.tearDown();
-    }
-
-    private static void goFFQ() throws Exception{
-
-        Command command = new Navigate(
-            CommandParams.getLoginFFQ() );
-        try {
-            command.execute()
-                .andThen(new Navigate(CommandParams.getFFQQuote()));
-        } catch (Exception e) {
-            logger.error("Error running the test: "+e.getMessage(), e);
-        }          
-        command.tearDown();
+        }     
     }
 
     private static boolean isBinaryAvailable(String binaryName) {
@@ -121,7 +91,14 @@ public class App {
         return osName.startsWith("Windows");
     }
     
-    private static void checkDriver(String chromeDriver){
+    private static void checkDriver(){
+
+        String chromeDriver = null;
+        if( isWindows() ){
+            chromeDriver = "chromedriver.exe";
+        }else{
+            chromeDriver = "chromedriver";
+        }
 
         if( ! isBinaryAvailable(chromeDriver) ){
 
@@ -129,7 +106,7 @@ public class App {
             if( System.getProperty("webdriver.chrome.driver") == null ){
 
                 logger.info("Chrome driver is not set as a system property (webdriver.chrome.driver). Setting a default location for it... ");
-                System.setProperty("webdriver.chrome.driver", "/Users/lddecaro/git/bedrock-test-automation/driver/chromedriver-mac-arm64/chromedriver");
+                System.setProperty("webdriver.chrome.driver", "/usr/bin");
                 logger.info("Set system property webdriver.chrome.driver with a default location of your chrome driver. Current set location is:  "+System.getProperty("webdriver.chrome.driver"));
             }else{
 

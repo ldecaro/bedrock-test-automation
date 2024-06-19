@@ -1,11 +1,21 @@
+#IDEs
+.idea
+.vscode
+
+#AWS CDK
+cdk.out
+cdk.context.json
+
 # Compiled class file
 *.class
 target*
 
 #drivers
-drivers*
+driver*
 
 state*
+screenshots*
+demo*
 
 # Log file
 *.log

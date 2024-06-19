@@ -33,7 +33,8 @@ public class SolveCaptcha  extends AbstractNavigation {
         // Open the web browser and navigate to the app's URL
         ChromeOptions options = new ChromeOptions();
         options.setHeadless(Boolean.FALSE);
-        options.addArguments("--remote-allow-origins=*");      
+        options.addArguments("--remote-allow-origins=*");  
+        options.addArguments("--no-sandbox", "--disable-dev-shm-usage");  
 
         browser = new ChromeDriver(options);
         browser.get(url);
@@ -53,6 +54,7 @@ public class SolveCaptcha  extends AbstractNavigation {
             new Actions(browser).sendKeys(cleanResult).perform();
             new Actions(browser).sendKeys(Keys.ENTER).perform();
             if (!missedCaptcha(browser.getPageSource())){
+                super.success = true;
                 break;
             }
         }

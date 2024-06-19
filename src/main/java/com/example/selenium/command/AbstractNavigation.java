@@ -31,9 +31,17 @@ import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.ui.FluentWait;
 import org.openqa.selenium.support.ui.Select;
 
+import com.example.selenium.AppInfra;
 import com.example.selenium.bedrock.BedrockClient;
 import com.example.selenium.html.HtmlElement;
 import com.googlecode.htmlcompressor.compressor.HtmlCompressor;
+
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.ssm.SsmClient;
+import software.amazon.awssdk.services.ssm.model.GetParameterRequest;
+import software.amazon.awssdk.services.ssm.model.GetParameterResponse;
 
 public abstract class AbstractNavigation implements Command {
     
@@ -42,6 +50,11 @@ public abstract class AbstractNavigation implements Command {
     protected BedrockClient service = null;
     protected WebDriver browser = null;
     protected final CommandParams params;
+    protected String s3Bucket = null;
+    //generate ramdom 6 character string
+    protected String s3Prefix = java.util.UUID.randomUUID().toString().substring(0, 6);
+    protected S3Client s3Client = null;
+    protected Boolean success   =   Boolean.FALSE;
 
     public AbstractNavigation(CommandParams params) {
         
@@ -52,6 +65,10 @@ public abstract class AbstractNavigation implements Command {
             throw e;
         }
         this.params = params;
+        if(params.useS3()){
+            this.s3Bucket = getS3BucketName();
+            s3Client = S3Client.builder().build();
+        }
     }
 
     protected void setDriver(WebDriver browser){
@@ -63,7 +80,7 @@ public abstract class AbstractNavigation implements Command {
 
 
         String url = params.getUrl();
-        // Integer delay = params.getDelay();
+        Integer delay = params.getDelay();
         Integer interactions = params.getInteractions();
         Integer loadWaitTime = params.getLoadWaitTime();
         List<String> pastActions = new ArrayList<>();
@@ -72,8 +89,8 @@ public abstract class AbstractNavigation implements Command {
         if( browser == null ){
             // Open the web browser and navigate to the app's URL
             ChromeOptions options = new ChromeOptions();
-            // options.setHeadless(Boolean.TRUE);
-            options.addArguments("--remote-allow-origins=*", "--window-size=2560,1440");
+            options.setHeadless(Boolean.TRUE);
+            options.addArguments("--remote-allow-origins=*", "--window-size=2560,1440", "--no-sandbox", "--disable-dev-shm-usage");
             browser = new ChromeDriver(options);
 
             browser.get(url);
@@ -105,7 +122,7 @@ public abstract class AbstractNavigation implements Command {
 
                 //logger.info("Source:\n "+html);
                 logger.info("Prompt Length:"+prompt.length());
-                // screenshot();
+                screenshot();
                 String response = service.invoke(prompt);
 
                 logger.info(response);
@@ -116,6 +133,7 @@ public abstract class AbstractNavigation implements Command {
                     logger.info(String.format("Test finished. Status: %s. Explanation: %s", text.getString("status"), text.getString("explanation")));   
                     //take a screenshot
                     screenshot();
+                    this.success    =   text.getString("status").toLowerCase().indexOf("failure")!=-1 ? Boolean.FALSE : Boolean.TRUE;
                     break;
                 }
 
@@ -142,6 +160,7 @@ public abstract class AbstractNavigation implements Command {
                 //new Actions(browser).moveToElement(click.getElement()).click().perform();
                 
                 pastActions.add(text.toString());
+                Thread.sleep(delay);
 
             }catch(Exception e){
                 // logger.error(e.getMessage());
@@ -428,10 +447,27 @@ public abstract class AbstractNavigation implements Command {
     protected File screenshot() throws IOException{
         File screenshot = ((TakesScreenshot)browser).getScreenshotAs(OutputType.FILE);
         String screenshotName = String.format("screenshot-%d.png", System.currentTimeMillis());
-        File screenshotFile = new File(screenshotName);
+        //test if directory exists otherwise create it
+        File directory = new File("./screenshots");
+        if (!directory.exists()) {
+            if(!directory.mkdirs()){
+                logger.info("Unable to create directory "+directory.getName());
+            }
+        }
+        File screenshotFile = new File("./screenshots/"+screenshotName);
         Files.copy(screenshot.toPath(), screenshotFile.toPath());
         logger.info("Screenshot saved to "+screenshotFile.toString());
 
+        if(this.params.useS3()){
+
+            PutObjectRequest objectRequest = PutObjectRequest.builder()
+                    .bucket(this.s3Bucket)
+                    .key(this.s3Prefix+"/"+screenshotName.toString())
+                    .build();
+
+            s3Client.putObject(objectRequest, RequestBody.fromFile(screenshotFile));
+            logger.info("Screenshot saved to "+objectRequest.bucket()+"/"+objectRequest.key());
+        }
         return screenshotFile;
     }
 
@@ -477,8 +513,38 @@ public abstract class AbstractNavigation implements Command {
     @Override
     public void tearDown() throws Exception {
         //release resources
-        browser.close();
-        browser.quit();
+        if( browser!=null){
+            browser.close();
+            browser.quit();
+        }
     }
     
+    public String getS3BucketName(){
+
+        // Create an SsmClient
+        SsmClient ssmClient = SsmClient.builder().build();
+        // Get the value of a parameter from the Parameter Store
+        GetParameterRequest getParameterRequest = GetParameterRequest.builder()
+                                                .name("/"+AppInfra.Constants.APP_NAME+"/bucket")
+                                                .build();
+
+        GetParameterResponse getParameterResponse = ssmClient.getParameter(getParameterRequest);
+        final String S3_BUCKET = getParameterResponse.parameter().value();
+        logger.info("Using S3 bucket "+S3_BUCKET);
+        return S3_BUCKET; 
+    }
+
+    public String getS3Prefix(){
+
+        return this.s3Prefix;
+    }
+
+    public String status(){
+
+        if( this.success ){
+            return "SUCCEED";
+        }else{
+            return "FAIL";
+        }
+    }
 }

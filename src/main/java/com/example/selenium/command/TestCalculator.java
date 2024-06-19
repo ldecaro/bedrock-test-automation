@@ -52,9 +52,9 @@ public class TestCalculator implements Command {
         Integer delay = params.getDelay();
         Integer interactions = params.getInteractions();
         Integer loadWaitTime = params.getLoadWaitTime();
-        String testType = params.getTestType();
-        String outputDir = params.getOutputDir();
-        List<ActionRecord> pastActions = params.getPastActions();
+        String testType = "bedrock";
+        String outputDir = "./output/";
+        List<ActionRecord> pastActions = new ArrayList<>();
 
         URI uri = new URI(url);
         if( "file".equals(uri.toURL().getProtocol()) ){
@@ -288,15 +288,16 @@ public class TestCalculator implements Command {
             .delay(1000)
             .interactions(100)
             .loadWaitTime(2000)
-            .testType("bedrock")
-            .outputDir("C:\\Users\\luizd\\git\\bedrock-test-automation\\target\\output")
-            .pastActions(new ArrayList<ActionRecord>())
         .build();
     }
 
     @Override
     public Command andThen(Command c) throws Exception {
         throw new RuntimeException("not implemented");
+    }
+
+    public String status(){
+        return "SUCCEED";
     }
 
     @Override

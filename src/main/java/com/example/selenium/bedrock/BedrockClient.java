@@ -12,8 +12,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.json.JSONObject;
 
-import com.example.selenium.command.CommandParams;
-
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.core.SdkBytes;
 import software.amazon.awssdk.http.async.SdkAsyncHttpClient;
@@ -274,16 +272,4 @@ public class BedrockClient implements BedrockService {
             return new BedrockClientConfig.BedrockClientConfigBuilder();
         }
     }    
-    
-
-    public static void main (String args[]){
-
-        logger.info("Starting client");
-        BedrockClient client = new BedrockClient();
-        // String response = client.invoke("Write a haiku about the weather");
-        File f = new File("C:\\Users\\luizd\\git\\bedrock-test-automation\\screenshot-1715103499437.png");
-        String response = client.invokeWithImage(CommandParams.getSolveCaptchaParams().getTestCase(), f);
-
-        logger.info(response);
-    }
 }
