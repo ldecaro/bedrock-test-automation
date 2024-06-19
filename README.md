@@ -40,6 +40,9 @@ curl "$MY_API_GATEWAY_URL" \
 	--aws-sigv4 "aws:amz:us-east-1:execute-api"
 ```
 
+To deploy using an existing VPC, update file `cdk.json` and add the VPC id as a parameter as shown in the image below. Then run `cdk deploy test-automation`
+
+<img src="./imgs/test-automation-use-existing-vpc.png" width=70% height=70%>
 
 ## Contributing
 
