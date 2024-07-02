@@ -43,7 +43,30 @@ curl "$MY_API_GATEWAY_URL" \
 
 To deploy using an existing VPC, update file `cdk.json` and add the VPC id as a parameter as shown in the image below. Then run `cdk deploy test-automation`
 
-<img src="./imgs/test-automation-use-existing-vpc.png" width=70% height=70%>
+<img src="./imgs/test-automation-use-existing-vpc.png" width=60% height=60%>
+
+## Test results
+
+- The project provides a sample test case that is to navigate the amazon store and add the most expensive pen into the shopping cart.
+- The prompt used is: *You are testing the amazon.com web application. Your test case is to add to cart the most expensive pen. The test case finishes when the pen is visible within the cart. You should monitor the number of items in the cart.*
+### Output
+<br>
+
+| <img src="./demo/case-3/screenshot-1719941853481.png" width=100%>  | <img src="./demo/case-3/screenshot-1719941925330.png" width=100%> |
+|:--------:|--------:|
+| Step #1. Explanation: To start the search for the most expensive pen, we need to enter 'pen' in the search box and submit the search. | Step #2. Explanation: To find the most expensive pen, we need to sort the search results by price from high to low. |
+<br>
+
+| <img src="./demo/case-3/screenshot-1719942011958.png"> | <img src="./demo/case-3/screenshot-1719942084550.png"> |
+|:--------:|--------:|
+| Step #3. Explanation: The search results are now displayed, sorted by price from high to low. We need to add the first (most expensive) pen to the cart. | Step #4. Explanation: The most expensive pen has been added to the cart. Now we need to verify that it is visible in the cart and check the number of items. |
+<br>
+
+| <img src="./demo/case-3/screenshot-1719942134212.png" width=60%>  |
+|:--------:|
+| Test finished. Status: success. Explanation: The most expensive pen has been successfully added to the cart and is now visible. The cart shows 1 item, which matches our expectation. | 
+
+
 
 ## Contributing
 
