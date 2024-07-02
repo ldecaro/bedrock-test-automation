@@ -52,17 +52,17 @@ To deploy using an existing VPC, update file `cdk.json` and add the VPC id as a 
 ### Output
 <br>
 
-| <img src="./demo/case-3/screenshot-1719941853481.png" width=100%>  | <img src="./demo/case-3/screenshot-1719941925330.png" width=100%> |
+| <img src="./imgs/screenshot-1719941853481.png" width=100%>  | <img src="./imgs/screenshot-1719941925330.png" width=100%> |
 |:--------:|--------:|
 | Step #1. Explanation: To start the search for the most expensive pen, we need to enter 'pen' in the search box and submit the search. | Step #2. Explanation: To find the most expensive pen, we need to sort the search results by price from high to low. |
 <br>
 
-| <img src="./demo/case-3/screenshot-1719942011958.png"> | <img src="./demo/case-3/screenshot-1719942084550.png"> |
+| <img src="./imgs/screenshot-1719942011958.png"> | <img src="./imgs/screenshot-1719942084550.png"> |
 |:--------:|--------:|
 | Step #3. Explanation: The search results are now displayed, sorted by price from high to low. We need to add the first (most expensive) pen to the cart. | Step #4. Explanation: The most expensive pen has been added to the cart. Now we need to verify that it is visible in the cart and check the number of items. |
 <br>
 
-| <img src="./demo/case-3/screenshot-1719942134212.png" width=60%>  |
+| <img src="./imgs/screenshot-1719942134212.png" width=60%>  |
 |:--------:|
 | Test finished. Status: success. Explanation: The most expensive pen has been successfully added to the cart and is now visible. The cart shows 1 item, which matches our expectation. | 
 
