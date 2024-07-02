@@ -26,15 +26,23 @@ public class BedrockClient implements BedrockService {
 
     private static Logger logger    =   LogManager.getLogger(BedrockClient.class);
 
+    @SuppressWarnings("unused")
     private static final String CLAUDE_SONNET = "anthropic.claude-3-sonnet-20240229-v1:0";
+    private static final String CLAUDE_SONNET_3_5 = "anthropic.claude-3-5-sonnet-20240620-v1:0";
+
     @SuppressWarnings("unused")
     private static final String CLAUDE_HAIKU = "anthropic.claude-3-haiku-20240307-v1:0";
+
+    private static final String DEFAULT_MODEL = CLAUDE_SONNET_3_5;
+
     private BedrockRuntimeAsyncClient client = null;
 
     private  BedrockClientConfig config    =   null;
 
     public BedrockClient() {
-        this(BedrockClientConfig.builder().maxTokens(200000).modelName(BedrockClient.CLAUDE_SONNET).build());
+
+        this(BedrockClientConfig.builder().maxTokens(200000).modelName(BedrockClient.DEFAULT_MODEL).build());
+        logger.info("Using LLM: "+BedrockClient.DEFAULT_MODEL);
     }
 
     public BedrockClient(BedrockClientConfig config) {
@@ -86,11 +94,16 @@ public class BedrockClient implements BedrockService {
 
         String modelId = config.getModelName();
 
+        Double temperature = 0.25d;
+        if( DEFAULT_MODEL.equals( BedrockClient.CLAUDE_SONNET_3_5 )){
+            temperature = 0.15d;
+        }
+
         // Prepare the JSON payload for the Messages API request
         var payload = new JSONObject()
                 .put("anthropic_version", "bedrock-2023-05-31")
                 .put("max_tokens", config.getMaxTokens())
-                .put("temperature", 0.25)
+                .put("temperature", temperature)
                 .append("messages", new JSONObject()
                         .put("role", "user")
                         .append("content", new JSONObject()                                

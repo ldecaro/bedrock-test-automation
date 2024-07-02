@@ -97,6 +97,7 @@ public abstract class AbstractNavigation implements Command {
             Thread.sleep(loadWaitTime);
         }
         String html = null;
+        String htmlCompressed   =   null;
         final List<HtmlElement> elements = new ArrayList<>();
 
         // Start testing
@@ -113,12 +114,13 @@ public abstract class AbstractNavigation implements Command {
                 elements.addAll(getHtmlElements(browser, params.setIds()));
                 if( params.setIds() )
                     setIds(browser, elements);
-                //TODO remove setIds and search for divs inside the iFrames too. Check how many before and after and check if there's a div from inside the iframe. Just look at the page source if divs inside the iFrame were given Ids
+
                 html = cleanHtml(browser.getPageSource());
+                htmlCompressed = compressor.compress(html);
                 // logger.info("HTML: "+html);
                 logger.info("HTML length: "+html.length());
-                logger.info("HTML COMPRESSED: "+compressor.compress(html).length());
-                String prompt = String.format( getPrompt(), html, testCase, pastActions, interactions-i, elements);
+                logger.info("HTML COMPRESSED: "+htmlCompressed.length());
+                String prompt = String.format( getPrompt(), htmlCompressed, testCase, pastActions, interactions-i, elements);
 
                 //logger.info("Source:\n "+html);
                 logger.info("Prompt Length:"+prompt.length());

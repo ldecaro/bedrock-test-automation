@@ -34,7 +34,7 @@ public class SolveCaptcha  extends AbstractNavigation {
         ChromeOptions options = new ChromeOptions();
         options.setHeadless(Boolean.FALSE);
         options.addArguments("--remote-allow-origins=*");  
-        options.addArguments("--no-sandbox", "--disable-dev-shm-usage");  
+        options.addArguments("--window-size=2560,1440", "--no-sandbox", "--disable-dev-shm-usage");  
 
         browser = new ChromeDriver(options);
         browser.get(url);

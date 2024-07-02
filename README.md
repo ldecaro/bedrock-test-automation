@@ -17,6 +17,7 @@ To run this project, the following are needed:
 - [Apache Maven](https://maven.apache.org/download.cgi)
 - [ChromeDriver](https://googlechromelabs.github.io/chrome-for-testing/) (or other browser driver depending on browser used for testing)
 - An [AWS account](https://aws.amazon.com) with access to Amazon Bedrock and Claude3 Sonnet.
+- [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/) to deploy this project to AWS.
 
 ## Running the sample test case (Amazon Cart)
 

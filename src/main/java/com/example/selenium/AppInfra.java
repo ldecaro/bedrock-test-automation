@@ -33,7 +33,6 @@ import software.amazon.awscdk.services.ec2.Vpc;
 import software.amazon.awscdk.services.ec2.VpcLookupOptions;
 import software.amazon.awscdk.services.ecs.AwsLogDriver;
 import software.amazon.awscdk.services.ecs.Cluster;
-import software.amazon.awscdk.services.ecs.ContainerDefinition;
 import software.amazon.awscdk.services.ecs.ContainerDefinitionOptions;
 import software.amazon.awscdk.services.ecs.ContainerImage;
 import software.amazon.awscdk.services.ecs.FargateService;
@@ -128,7 +127,7 @@ public class AppInfra {
                     .build();                   
 
             // Create an IAM role for API Gateway
-            Role credentialsRole = Role.Builder.create(this, "Role")
+            Role credentialsRole = Role.Builder.create(this, Constants.APP_NAME+"-apigw-role")
                     .assumedBy(ServicePrincipal.Builder.create("apigateway.amazonaws.com").build())
                     .build();
 
@@ -194,12 +193,12 @@ public class AppInfra {
             }
 
             // Create an ECS cluster
-            Cluster cluster = Cluster.Builder.create(this, "Cluster")
+            Cluster cluster = Cluster.Builder.create(this, Constants.APP_NAME+"-ecs-cluster")
                     .vpc(vpc)
                     .build();
 
             // Create an IAM role for ECS tasks
-            Role ecsTaskRole = Role.Builder.create(this, "EcsTaskRole")
+            Role ecsTaskRole = Role.Builder.create(this, Constants.APP_NAME+"-ecstaskrole")
                     .assumedBy(ServicePrincipal.Builder.create("ecs-tasks.amazonaws.com").build())
                     .build();
 
@@ -232,7 +231,7 @@ public class AppInfra {
                     .build());
 
             // Create a Fargate task definition
-            FargateTaskDefinition fargateTaskDefinition = FargateTaskDefinition.Builder.create(this, "FargateTaskDef")
+            FargateTaskDefinition fargateTaskDefinition = FargateTaskDefinition.Builder.create(this, Constants.APP_NAME+"=fargateTaskDef")
                     .memoryLimitMiB(4096)
                     .cpu(2048)
                     .taskRole(ecsTaskRole)
@@ -244,13 +243,13 @@ public class AppInfra {
                     .build();
 
             // Add a container to the task definition
-            ContainerDefinition appContainer = fargateTaskDefinition.addContainer("Container", ContainerDefinitionOptions.builder()
+            fargateTaskDefinition.addContainer("Container", ContainerDefinitionOptions.builder()
                 .image(ContainerImage.fromAsset(".", null))
                 .logging(logging)
                 .build());
 
             // Create a Fargate service
-            FargateService service = FargateService.Builder.create(this, "Service")
+            FargateService service = FargateService.Builder.create(this, Constants.APP_NAME+"-ecsService")
                     .cluster(cluster)
                     .taskDefinition(fargateTaskDefinition)
                     .desiredCount(0)
@@ -258,7 +257,7 @@ public class AppInfra {
 
             // Configure task auto-scaling
             ScalableTaskCount scaling = service.autoScaleTaskCount(EnableScalingProps.builder()
-                    .minCapacity(1)
+                    .minCapacity(0)
                     .maxCapacity(10)
                     .build());
 
@@ -266,12 +265,11 @@ public class AppInfra {
             scaling.scaleOnMetric("QueueMessagesVisibleScaling", BasicStepScalingPolicyProps.builder()
                     .metric(messageQueue.metricApproximateNumberOfMessagesVisible())
                     .adjustmentType(AdjustmentType.CHANGE_IN_CAPACITY)
-                    .cooldown(Duration.seconds(300))
-                    //TODO implement cooldown per scaling step
-                    .scalingSteps((java.util.List.of(
-                        ScalingInterval.builder().upper(0).change(-1).build(), 
-                        ScalingInterval.builder().lower(1).change(1).build())))
-                    .build());   
+                    .cooldown(Duration.seconds(600))
+                    .scalingSteps(java.util.List.of(
+                        ScalingInterval.builder().upper(0).change(-1).build(),
+                        ScalingInterval.builder().lower(1).change(1).build()))
+                    .build());                 
                     
             //s3 bucket to store screenshots
             Bucket bucket = Bucket.Builder.create(this, Constants.APP_NAME+"-bucket")

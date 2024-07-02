@@ -5,7 +5,6 @@ import java.io.IOException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import com.example.selenium.command.Command;
 import com.example.selenium.command.CommandParams;
 import com.example.selenium.command.Navigate;
 import com.example.selenium.command.SolveCaptcha;
