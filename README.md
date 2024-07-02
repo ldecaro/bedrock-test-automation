@@ -6,7 +6,7 @@ This project implements an automated web UI testing framework that remotely cont
 
 ## What it does
 
-The solution can execute different types of test cases for authentication, creation of tickets, searching for products, adding products into shopping cart, empty shopping cart etc. It simulates clicking buttons, entering data and more to try to execute a functional test case in a web application. You can integreate this test automation tool with any sort of pipeline using the architecture below:
+The solution can execute different types of test cases for authentication, creation of tickets, searching for products, adding products into shopping cart, empty shopping cart etc. It simulates clicking buttons, entering data and more to try to execute a functional test case in a web application. You can integrate this test automation tool with any type of CI/CD pipeline using the architecture below:
 
 <img src="./imgs/test-automation-arch.png">
 
@@ -18,13 +18,14 @@ To run this project, the following are needed:
 - [ChromeDriver](https://googlechromelabs.github.io/chrome-for-testing/) (or other browser driver depending on browser used for testing)
 - An [AWS account](https://aws.amazon.com) with access to Amazon Bedrock and Claude3 Sonnet.
 - [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/) to deploy this project to AWS.
+- Access to Virginia Region (us-east-1) on AWS. Update `BedrockClient.java` to use Bedrock in another Region.
 
 ## Running the sample test case (Amazon Cart)
 
 - Clone the project repository
 - Run `mvn package` to build the application
 - Authenticate your CLI to your AWS environment
-- Run locally using the debugger of your favorite IDE (I tested using VSCode)
+- Run locally using the debugger of your favorite IDE (I tested using VSCode to run App.java) or using the following command:
 
 ```
 java -jar target/genai-selenium-1.0-SNAPSHOT.jar 
@@ -49,6 +50,8 @@ To deploy using an existing VPC, update file `cdk.json` and add the VPC id as a 
 
 - The project provides a sample test case that is to navigate the amazon store and add the most expensive pen into the shopping cart.
 - The prompt used is: *You are testing the amazon.com web application. Your test case is to add to cart the most expensive pen. The test case finishes when the pen is visible within the cart. You should monitor the number of items in the cart.*
+- For each interaction with the web browser, the LLM is expected to provide its reasoning behind the actions it is executing.
+- The sequence of screenshots below is from an execution of the sample test case. The reasoning for each step is taken from log files.
 ### Output
 <br>
 
