@@ -36,7 +36,12 @@ public class SolveCaptcha  extends AbstractNavigation {
         options.addArguments("--remote-allow-origins=*");  
         options.addArguments("--window-size=2560,1440", "--no-sandbox", "--disable-dev-shm-usage");  
 
-        browser = new ChromeDriver(options);
+        try{
+            browser = new ChromeDriver(options);
+        }catch(Exception e){
+            logger.error("Error starting the browser. Either the chromedriver is not available in the path or the version is different from your browser version. Msg: "+e.getMessage() );
+            throw e;
+        }
         browser.get(url);
         Thread.sleep(loadWaitTime);
         while(true){

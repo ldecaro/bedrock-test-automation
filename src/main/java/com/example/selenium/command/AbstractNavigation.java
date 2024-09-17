@@ -91,7 +91,11 @@ public abstract class AbstractNavigation implements Command {
             ChromeOptions options = new ChromeOptions();
             options.setHeadless(Boolean.TRUE);
             options.addArguments("--remote-allow-origins=*", "--window-size=2560,1440", "--no-sandbox", "--disable-dev-shm-usage");
-            browser = new ChromeDriver(options);
+            try{
+                browser = new ChromeDriver(options);
+            }catch(Exception e){
+                logger.error("Error starting the browser. Either the chromedriver is not available in the path or the version is different from your browser version. Msg: "+e.getMessage() );
+            }
 
             browser.get(url);
             Thread.sleep(loadWaitTime);
@@ -124,8 +128,8 @@ public abstract class AbstractNavigation implements Command {
 
                 //logger.info("Source:\n "+html);
                 logger.info("Prompt Length:"+prompt.length());
-                screenshot();
-                String response = service.invoke(prompt);
+                
+                String response = service.invokeWithImage(prompt, screenshot());
 
                 logger.info(response);
 
@@ -494,6 +498,7 @@ public abstract class AbstractNavigation implements Command {
             {"status":"failure","explanation":"<EXPLANATION>"}
             </examples>
             8- For test to finish successfully, your explanation must contain evidence within the source HTML code that conditions to finish the test were met. Do not finish test successfully before finding evidence within the HTML code.
+            9- You can use information from the image that was rendered using the HTML code provided within <code></code>
 
             <code>%s</code>
             <testcase>%s The test fails if you cannot complete the action after the number of available interactions gets to 0 or if you cannot complete the action for another reason.</testcase>
