@@ -71,12 +71,14 @@ public class BedrockClient implements BedrockService {
     @Override
     public String invoke(String prompt) {
         
+        logger.info("Invoking LLM "+BedrockClient.DEFAULT_MODEL);
         JSONObject messagesApiResponse = invokeModelWithResponseStream(prompt);
         return messagesApiResponse.toString(2);
     }
 
     public String invokeWithImage(String prompt, File imageLocation){
 
+        logger.info("Invoking LLM "+BedrockClient.DEFAULT_MODEL+" with image "+imageLocation.toPath().toString());
         JSONObject messagesApiResponse = invokeModelWithResponseStream(prompt, imageLocation);
         return messagesApiResponse.toString(2);
     }
